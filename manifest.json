@@ -1,0 +1,11 @@
+{
+  "name": "Motivational Quote New Tab",
+  "description": "Shows a random motivational quote on the New Tab page.",
+  "version": "1.0.0",
+  "manifest_version": 3,
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  },
+  "permissions": ["storage"],
+  "options_page": "options.html"
+}

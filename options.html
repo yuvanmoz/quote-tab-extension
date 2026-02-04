@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quote Manager</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <div class="shell">
+    <header class="hero">
+      <div class="hero-text">
+        <div class="badge">Quote Studio</div>
+        <h1>Quote Manager</h1>
+        <p>Add, edit, or delete your motivational quotes. Changes sync across devices.</p>
+      </div>
+      <div class="hero-card">
+        <div class="stat">
+          <span>Total quotes</span>
+          <strong id="quoteCount">0</strong>
+        </div>
+        <button id="clearAll" type="button" class="danger">Clear all</button>
+      </div>
+    </header>
+
+    <section class="grid">
+      <section class="panel">
+        <div class="panel-title">
+          <h2>Add a quote</h2>
+          <span class="panel-hint">Single entry</span>
+        </div>
+        <div class="field">
+          <label for="quoteText">Quote</label>
+          <textarea id="quoteText" rows="3" placeholder="Type your quote"></textarea>
+        </div>
+        <div class="field">
+          <label for="quoteAuthor">Author (optional)</label>
+          <input id="quoteAuthor" type="text" placeholder="Your name" />
+        </div>
+        <button id="addQuote" type="button" class="primary">Add quote</button>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <h2>Bulk import</h2>
+          <span class="panel-hint">Paste multiple</span>
+        </div>
+        <p>One quote per line. Optional author format: <span class="mono">Quote text - Author</span></p>
+        <textarea id="bulkInput" rows="6" placeholder="Line 1\nLine 2 - Author"></textarea>
+        <button id="importQuotes" type="button">Import</button>
+      </section>
+    </section>
+
+    <section class="panel list-panel">
+      <div class="row">
+        <h2>Your quotes</h2>
+      </div>
+      <div id="quoteList" class="list"></div>
+      <div id="emptyList" class="empty" hidden>No quotes yet.</div>
+    </section>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
