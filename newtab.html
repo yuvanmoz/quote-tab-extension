@@ -27,26 +27,47 @@
       </div>
     </header>
 
-    <section class="card" aria-live="polite">
-      <div class="quote-mark">"</div>
-      <blockquote class="quote-text" id="quoteText"></blockquote>
-      <div class="quote-author" id="quoteAuthor"></div>
-      <div class="actions">
-        <button id="nextQuote" type="button">Next quote</button>
-        <button id="manageQuotes" type="button">Manage quotes</button>
+    <div class="layout">
+      <aside class="year-progress-container">
+        <div class="year-title">2026</div>
+        <div class="progress-grid" id="progressGrid"></div>
+        <div class="progress-stats" id="progressStats"></div>
+      </aside>
+
+      <div class="content-stack">
+        <section class="card" aria-live="polite">
+          <div class="quote-mark">"</div>
+          <blockquote class="quote-text" id="quoteText"></blockquote>
+          <div class="quote-author" id="quoteAuthor"></div>
+          <div class="actions">
+            <button id="nextQuote" type="button">Next quote</button>
+            <button id="manageQuotes" type="button">Manage quotes</button>
+          </div>
+        </section>
+
+        <section class="shortcuts" aria-label="Your sites">
+          <div class="section-title">Your sites</div>
+          <div class="tiles" id="siteList"></div>
+          <div class="empty" id="sitesEmpty" hidden>No sites yet. Add your first shortcut.</div>
+        </section>
       </div>
-    </section>
+
+      <aside class="quick-notes is-collapsed" id="quickNotes" aria-label="Quick notes">
+        <div class="quick-notes-head">
+          <span class="quick-notes-title">Quick Notes</span>
+          <button id="notesToggle" class="quick-notes-toggle" type="button" aria-expanded="false" aria-label="Expand notes">+</button>
+        </div>
+        <button id="notesPreview" class="quick-notes-preview" type="button">Add a quick reminder...</button>
+        <textarea id="notesInput" class="quick-notes-input" rows="5" placeholder="Write a quick reminder..."></textarea>
+      </aside>
+    </div>
 
     <div class="empty" id="emptyState" hidden>
       <p>No quotes yet. Add your first quote in options.</p>
       <button id="openOptions" type="button">Open quote manager</button>
     </div>
 
-    <section class="shortcuts" aria-label="Your sites">
-      <div class="section-title">Your sites</div>
-      <div class="tiles" id="siteList"></div>
-      <div class="empty" id="sitesEmpty" hidden>No sites yet. Add your first shortcut.</div>
-    </section>
+    
   </main>
 
   <div class="modal" id="siteModal" hidden>

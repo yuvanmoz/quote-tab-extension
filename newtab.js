@@ -1,9 +1,74 @@
 const QUOTES_KEY = "quotes";
 const THEME_KEY = "theme";
 const SITES_KEY = "sites";
+const NOTE_KEY = "quick_note";
+const TYPE_SPEED_MS = 45;
+const DELETE_SPEED_MS = 28;
+const HOLD_AFTER_TYPE_MS = 1600;
+const HOLD_AFTER_DELETE_MS = 320;
+const NOTE_SAVE_DEBOUNCE_MS = 250;
 let editIndex = null;
 let dndReady = false;
 let escHandler = null;
+let typewriterTimer = null;
+let typewriterRunId = 0;
+let noteSaveTimer = null;
+
+function clearTypewriter() {
+  if (typewriterTimer) {
+    clearTimeout(typewriterTimer);
+    typewriterTimer = null;
+  }
+  typewriterRunId += 1;
+}
+
+function startTypewriterLoop(text) {
+  const quoteText = document.getElementById("quoteText");
+  if (!quoteText) return;
+
+  clearTypewriter();
+  const fullText = (text || "").toString();
+  if (!fullText) {
+    quoteText.textContent = "";
+    return;
+  }
+
+  const runId = typewriterRunId;
+  let index = 0;
+  let deleting = false;
+  quoteText.textContent = "";
+
+  const step = () => {
+    if (runId !== typewriterRunId) return;
+
+    if (!deleting) {
+      index += 1;
+      quoteText.textContent = fullText.slice(0, index);
+      if (index < fullText.length) {
+        typewriterTimer = setTimeout(step, TYPE_SPEED_MS);
+      } else {
+        typewriterTimer = setTimeout(() => {
+          deleting = true;
+          step();
+        }, HOLD_AFTER_TYPE_MS);
+      }
+      return;
+    }
+
+    index -= 1;
+    quoteText.textContent = fullText.slice(0, Math.max(0, index));
+    if (index > 0) {
+      typewriterTimer = setTimeout(step, DELETE_SPEED_MS);
+    } else {
+      typewriterTimer = setTimeout(() => {
+        deleting = false;
+        step();
+      }, HOLD_AFTER_DELETE_MS);
+    }
+  };
+
+  typewriterTimer = setTimeout(step, TYPE_SPEED_MS);
+}
 
 function getQuotes() {
   return new Promise((resolve) => {
@@ -24,6 +89,20 @@ function getSites() {
 function setSites(sites) {
   return new Promise((resolve) => {
     chrome.storage.sync.set({ [SITES_KEY]: sites }, () => resolve());
+  });
+}
+
+function getQuickNote() {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get({ [NOTE_KEY]: "" }, (data) => {
+      resolve((data[NOTE_KEY] || "").toString());
+    });
+  });
+}
+
+function setQuickNote(value) {
+  return new Promise((resolve) => {
+    chrome.storage.sync.set({ [NOTE_KEY]: value }, () => resolve());
   });
 }
 
@@ -112,6 +191,9 @@ async function renderQuote(lastIndex = -1) {
   const emptyState = document.getElementById("emptyState");
   const card = document.querySelector(".card");
   if (quotes.length === 0) {
+    clearTypewriter();
+    const quoteText = document.getElementById("quoteText");
+    quoteText.textContent = "";
     emptyState.hidden = false;
     card.style.display = "none";
     return { quotes, index: -1 };
@@ -124,7 +206,7 @@ async function renderQuote(lastIndex = -1) {
   const quoteText = document.getElementById("quoteText");
   const quoteAuthor = document.getElementById("quoteAuthor");
 
-  quoteText.textContent = quote.text;
+  startTypewriterLoop(quote.text);
   quoteAuthor.textContent = quote.author ? `-- ${quote.author}` : "";
 
   return { quotes, index };
@@ -380,10 +462,150 @@ async function handleAddSite(event) {
 
 let lastIndex = -1;
 
+function setNotesExpanded(expanded) {
+  const notesBox = document.getElementById("quickNotes");
+  const toggle = document.getElementById("notesToggle");
+  const input = document.getElementById("notesInput");
+  if (!notesBox || !toggle || !input) return;
+
+  notesBox.classList.toggle("is-collapsed", !expanded);
+  toggle.textContent = expanded ? "-" : "+";
+  toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+
+  if (expanded) {
+    input.focus();
+  }
+}
+
+function updateNotesPreview(text) {
+  const preview = document.getElementById("notesPreview");
+  if (!preview) return;
+  const normalized = (text || "").replace(/\s+/g, " ").trim();
+  preview.textContent = normalized || "Add a quick reminder...";
+}
+
+function scheduleNoteSave(text) {
+  if (noteSaveTimer) {
+    clearTimeout(noteSaveTimer);
+  }
+  noteSaveTimer = setTimeout(() => {
+    setQuickNote(text);
+  }, NOTE_SAVE_DEBOUNCE_MS);
+}
+
+async function initQuickNotes() {
+  const notesBox = document.getElementById("quickNotes");
+  const toggle = document.getElementById("notesToggle");
+  const preview = document.getElementById("notesPreview");
+  const input = document.getElementById("notesInput");
+  if (!notesBox || !toggle || !preview || !input) return;
+
+  const saved = await getQuickNote();
+  input.value = saved;
+  updateNotesPreview(saved);
+  setNotesExpanded(false);
+
+  toggle.addEventListener("click", () => {
+    const collapsed = notesBox.classList.contains("is-collapsed");
+    setNotesExpanded(collapsed);
+  });
+
+  preview.addEventListener("click", () => {
+    setNotesExpanded(true);
+  });
+
+  input.addEventListener("input", () => {
+    const text = input.value;
+    updateNotesPreview(text);
+    scheduleNoteSave(text);
+  });
+
+  input.addEventListener("blur", () => {
+    setTimeout(() => {
+      if (!notesBox.contains(document.activeElement)) {
+        setNotesExpanded(false);
+      }
+    }, 120);
+  });
+
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      input.blur();
+      setNotesExpanded(false);
+    }
+  });
+}
+
+function calculateYearProgress() {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  
+  // Start of year
+  const startOfYear = new Date(currentYear, 0, 1);
+  
+  // End of year
+  const endOfYear = new Date(currentYear, 11, 31);
+  
+  // Days completed (from Jan 1 to today)
+  const daysCompleted = Math.floor((now - startOfYear) / (1000 * 60 * 60 * 24)) + 1;
+  
+  // Total days in the year
+  const totalDays = Math.floor((endOfYear - startOfYear) / (1000 * 60 * 60 * 24)) + 1;
+  
+  // Days left (not including today)
+  const daysLeft = totalDays - daysCompleted;
+  
+  // Percentage completed
+  const percentage = Math.floor((daysCompleted / totalDays) * 100);
+  
+  return {
+    daysCompleted,
+    daysLeft,
+    totalDays,
+    percentage,
+    currentDate: now
+  };
+}
+
+function renderProgressGrid() {
+  const progress = calculateYearProgress();
+  const gridContainer = document.getElementById("progressGrid");
+  const statsContainer = document.getElementById("progressStats");
+  
+  // Clear existing content
+  gridContainer.innerHTML = "";
+  
+  // Create 365 day dots
+  for (let i = 1; i <= progress.totalDays; i++) {
+    const dot = document.createElement("div");
+    dot.className = "progress-day";
+    
+    if (i <= progress.daysCompleted) {
+      dot.classList.add("completed");
+    }
+    
+    gridContainer.appendChild(dot);
+  }
+  
+  // Format date
+  const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+  const dateStr = progress.currentDate.toLocaleDateString('en-US', dateOptions);
+  
+  // Update stats
+  statsContainer.innerHTML = `
+    <div><span class="stats-number">${progress.daysCompleted}</span> days completed</div>
+    <div><span class="stats-number">${progress.daysLeft}</span> days left</div>
+    <div style="margin-top: 8px; font-size: 12px; color: var(--muted);">${dateStr}</div>
+  `;
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   await initTheme();
+  renderProgressGrid();
   setupContainerDnD();
   await renderSites();
+  await initQuickNotes();
 
   const state = await renderQuote();
   lastIndex = state.index;

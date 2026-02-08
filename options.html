@@ -19,7 +19,10 @@
           <span>Total quotes</span>
           <strong id="quoteCount">0</strong>
         </div>
-        <button id="clearAll" type="button" class="danger">Clear all</button>
+        <div class="hero-actions">
+          <button id="exportQuotes" type="button">Export</button>
+          <button id="clearAll" type="button" class="danger">Clear all</button>
+        </div>
       </div>
     </header>
 
@@ -49,6 +52,19 @@
         <textarea id="bulkInput" rows="6" placeholder="Line 1\nLine 2 - Author"></textarea>
         <button id="importQuotes" type="button">Import</button>
       </section>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">
+        <h2>Fullscreen Tab Overlay</h2>
+        <span class="panel-hint">Whitelist domains</span>
+      </div>
+      <p>Only these domains will show the fullscreen tab overlay. One domain per line (e.g., <span class="mono">tradingview.com</span>).</p>
+      <textarea id="whitelistInput" rows="5" placeholder="angelone.in\ntradingview.com"></textarea>
+      <div class="row">
+        <button id="saveWhitelist" type="button" class="primary">Save whitelist</button>
+        <span id="whitelistStatus" class="status"></span>
+      </div>
     </section>
 
     <section class="panel list-panel">

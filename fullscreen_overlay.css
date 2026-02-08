@@ -1,0 +1,148 @@
+:root {
+  --nt-overlay-bg: rgba(255, 255, 255, 0.72);
+  --nt-overlay-text: #111111;
+  --nt-overlay-border: rgba(255, 255, 255, 0.56);
+  --nt-overlay-accent: rgba(72, 130, 255, 0.9);
+  --nt-overlay-tint: rgba(72, 130, 255, 0.18);
+}
+
+#nt-hover-zone {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 10px;
+  z-index: 2147483646;
+  background: transparent;
+  pointer-events: auto;
+}
+
+#nt-tab-panel {
+  position: fixed;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  min-width: 280px;
+  max-width: min(720px, 92vw);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.35)), var(--nt-overlay-bg);
+  border: 1px solid rgba(255, 255, 255, 0.44);
+    border-radius: 999px;
+  padding: 12px;
+   backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  color: var(--nt-overlay-text);
+  display: grid;
+  gap: 10px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 2147483647;
+ box-shadow: 0 18px 44px rgba(20, 24, 32, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+   transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+}
+
+#nt-tab-panel::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: 999px;
+  border: none;
+  pointer-events: none;
+}
+
+#nt-tab-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.65), transparent 52%);
+  pointer-events: none;
+}
+
+#nt-debug {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 2147483647;
+  padding: 4px 8px;
+  border-radius: 999px;
+ background: rgba(255, 255, 255, 0.72);
+   border: 1px solid var(--nt-overlay-border);
+  color: var(--nt-overlay-text);
+  font-size: 11px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+#nt-tab-panel.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.nt-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: rgba(17, 17, 17, 0.72);
+}
+
+#nt-fullscreen-toggle {
+  border: 1px solid var(--nt-overlay-border);
+  background: rgba(255, 255, 255, 0.58);
+  color: var(--nt-overlay-text);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#nt-fullscreen-toggle:hover {
+  border-color: var(--nt-overlay-accent);
+  color: var(--nt-overlay-accent);
+}
+
+#nt-tab-list {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding-top: 1px;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+
+.nt-tab-item {
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.66);
+  border-radius: 999px;
+  padding: 8px 18px;
+  min-height: 28px;
+  font-size: 12px;
+  color: inherit;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease, color 120ms ease;
+}
+
+.nt-tab-item:hover {
+  border-color: var(--nt-overlay-accent);
+  color: #0e1116;
+  background: var(--nt-overlay-tint);
+  transform: none;
+}
+
+.nt-tab-item.active {
+  border-color: var(--nt-overlay-accent);
+  background: var(--nt-overlay-tint);
+}

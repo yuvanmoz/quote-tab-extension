@@ -3,9 +3,20 @@
   "description": "Shows a random motivational quote on the New Tab page.",
   "version": "1.0.0",
   "manifest_version": 3,
+  "background": {
+    "service_worker": "background.js"
+  },
   "chrome_url_overrides": {
     "newtab": "newtab.html"
   },
-  "permissions": ["storage"],
-  "options_page": "options.html"
+  "permissions": ["storage", "tabs", "windows"],
+  "host_permissions": ["https://*/*", "http://*/*"],
+  "options_page": "options.html",
+  "content_scripts": [
+    {
+      "matches": ["https://*/*", "http://*/*"],
+      "js": ["fullscreen_overlay.js"],
+      "css": ["fullscreen_overlay.css"]
+    }
+  ]
 }

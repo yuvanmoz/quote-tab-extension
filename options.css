@@ -2,11 +2,26 @@
   --bg-1: #f6f1e8;
   --bg-2: #efe3cf;
   --panel: #ffffff;
+  --surface: #fdf9f3;
+  --surface-2: #fffdf8;
   --text: #2a2622;
   --muted: #6c645b;
   --accent: #8a5a2b;
   --border: #e2d6c4;
   --danger: #9b3a2a;
+}
+
+body[data-theme="dark"] {
+  --bg-1: #1c1b19;
+  --bg-2: #0f0f10;
+  --panel: #1e1c1a;
+  --surface: #2a2622;
+  --surface-2: #26221f;
+  --text: #f5f2ea;
+  --muted: #c5bdb2;
+  --accent: #e5b076;
+  --border: #3a342e;
+  --danger: #d46a5a;
 }
 
 * {
@@ -52,7 +67,7 @@ body {
   border: 1px solid rgba(138, 90, 43, 0.3);
   padding: 6px 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--surface);
   margin-bottom: 12px;
 }
 
@@ -83,6 +98,12 @@ p {
   display: grid;
   gap: 12px;
   justify-items: start;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .stat {
@@ -141,7 +162,7 @@ textarea, input {
   padding: 10px 12px;
   font-size: 14px;
   font-family: inherit;
-  background: #fffdf8;
+  background: var(--surface-2);
   color: inherit;
 }
 
@@ -151,7 +172,7 @@ textarea {
 
 button {
   border: 1px solid var(--border);
-  background: #fdf9f3;
+  background: var(--surface);
   color: var(--text);
   font-size: 14px;
   padding: 10px 16px;
@@ -193,16 +214,81 @@ button.danger {
   gap: 12px;
 }
 
+.status {
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .list {
   display: grid;
   gap: 12px;
+}
+
+/* Compact row view for quotes */
+.quote-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.quote-row .row-text {
+  flex: 1 1 auto;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 14px;
+}
+
+.quote-row .row-author {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--muted);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quote-row .row-actions {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+}
+
+.icon-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Editing state uses the existing .quote-item styles but slightly tighter */
+.quote-item.editing {
+  padding: 10px;
+}
+
+.quote-edit-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .quote-item {
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 14px;
-  background: #fffdf8;
+  background: var(--surface-2);
   display: grid;
   gap: 10px;
 }
