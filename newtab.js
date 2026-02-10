@@ -2,6 +2,7 @@ const QUOTES_KEY = "quotes";
 const THEME_KEY = "theme";
 const SITES_KEY = "sites";
 const NOTE_KEY = "quick_note";
+const CLOCK_TIMER_STATE_KEY = "floating_clock_timer_state";
 const TYPE_SPEED_MS = 45;
 const DELETE_SPEED_MS = 28;
 const HOLD_AFTER_TYPE_MS = 1600;
@@ -20,6 +21,37 @@ let meditationPhaseTimer = null;
 let meditationEndAt = 0;
 let meditationRunning = false;
 let meditationPhase = "exhale";
+let focusTimerTick = null;
+let focusTimerState = {
+  durationMs: 25 * 60 * 1000,
+  elapsedMs: 0,
+  startedAt: null,
+  isRunning: false,
+};
+
+function sanitizeTimerState(raw) {
+  const durationMs = Math.max(60 * 1000, Number(raw?.durationMs) || 25 * 60 * 1000);
+  const elapsedMs = Math.min(Math.max(0, Number(raw?.elapsedMs) || 0), durationMs);
+  const startedAt = typeof raw?.startedAt === "number" ? raw.startedAt : null;
+  const isRunning = Boolean(raw?.isRunning && startedAt);
+  return { durationMs, elapsedMs, startedAt, isRunning };
+}
+
+function getClockTimerState() {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get({ [CLOCK_TIMER_STATE_KEY]: null }, (data) => {
+      resolve(sanitizeTimerState(data[CLOCK_TIMER_STATE_KEY]));
+    });
+  });
+}
+
+function setClockTimerState(nextState) {
+  const sanitized = sanitizeTimerState(nextState);
+  focusTimerState = sanitized;
+  return new Promise((resolve) => {
+    chrome.storage.sync.set({ [CLOCK_TIMER_STATE_KEY]: sanitized }, () => resolve(sanitized));
+  });
+}
 
 function clearTypewriter() {
   if (typewriterTimer) {
@@ -551,6 +583,193 @@ function formatSeconds(totalSeconds) {
   return `${mm}:${ss}`;
 }
 
+function formatTimerMs(ms) {
+  const totalSeconds = Math.ceil(Math.max(0, ms) / 1000);
+  return formatSeconds(totalSeconds);
+}
+
+function getLiveTimerRemainingMs(state) {
+  if (!state.isRunning || !state.startedAt) {
+    return Math.max(0, state.durationMs - state.elapsedMs);
+  }
+  const elapsedSinceStart = Date.now() - state.startedAt;
+  const totalElapsed = state.elapsedMs + Math.max(0, elapsedSinceStart);
+  return Math.max(0, state.durationMs - totalElapsed);
+}
+
+function getLiveTimerElapsedMs(state) {
+  return Math.max(0, state.durationMs - getLiveTimerRemainingMs(state));
+}
+
+function getTimerProgress(state) {
+  if (!state || state.durationMs <= 0) return 0;
+  if (!state.isRunning && state.elapsedMs <= 0) return 0;
+  return Math.min(1, getLiveTimerElapsedMs(state) / state.durationMs);
+}
+
+function renderFocusTimer(state = focusTimerState) {
+  const display = document.getElementById("focusTimerDisplay");
+  const status = document.getElementById("focusTimerStatus");
+  const meta = document.getElementById("focusTimerMeta");
+  const minutesInput = document.getElementById("focusTimerMinutes");
+  if (!display || !status || !meta || !minutesInput) return;
+
+  const remainingMs = getLiveTimerRemainingMs(state);
+  const progress = getTimerProgress(state);
+  display.textContent = formatTimerMs(remainingMs);
+
+  if (remainingMs <= 0 && (state.isRunning || state.elapsedMs >= state.durationMs)) {
+    status.textContent = "Done";
+    meta.textContent = "Clock fill is complete";
+  } else if (state.isRunning) {
+    status.textContent = "Running";
+    meta.textContent = `${Math.floor(progress * 100)}% completed`;
+  } else if (state.elapsedMs > 0) {
+    status.textContent = "Paused";
+    meta.textContent = `${Math.floor(progress * 100)}% completed`;
+  } else {
+    status.textContent = "Idle";
+    meta.textContent = "Progress appears on floating clock";
+  }
+
+  if (!state.isRunning) {
+    minutesInput.value = String(Math.round(state.durationMs / 60000));
+  }
+}
+
+function stopFocusTimerTicker() {
+  if (focusTimerTick) {
+    clearInterval(focusTimerTick);
+    focusTimerTick = null;
+  }
+}
+
+function startFocusTimerTicker() {
+  stopFocusTimerTicker();
+  focusTimerTick = setInterval(async () => {
+    if (!focusTimerState.isRunning) {
+      stopFocusTimerTicker();
+      return;
+    }
+    const remainingMs = getLiveTimerRemainingMs(focusTimerState);
+    renderFocusTimer(focusTimerState);
+    if (remainingMs <= 0) {
+      const finalized = {
+        ...focusTimerState,
+        elapsedMs: focusTimerState.durationMs,
+        startedAt: null,
+        isRunning: false,
+      };
+      await setClockTimerState(finalized);
+      renderFocusTimer(finalized);
+      stopFocusTimerTicker();
+    }
+  }, 250);
+}
+
+async function initFocusTimer() {
+  const minutesInput = document.getElementById("focusTimerMinutes");
+  const startBtn = document.getElementById("focusTimerStart");
+  const pauseBtn = document.getElementById("focusTimerPause");
+  const resetBtn = document.getElementById("focusTimerReset");
+  if (!minutesInput || !startBtn || !pauseBtn || !resetBtn) return;
+
+  focusTimerState = await getClockTimerState();
+  renderFocusTimer(focusTimerState);
+
+  if (focusTimerState.isRunning) {
+    const remainingMs = getLiveTimerRemainingMs(focusTimerState);
+    if (remainingMs <= 0) {
+      focusTimerState = await setClockTimerState({
+        ...focusTimerState,
+        elapsedMs: focusTimerState.durationMs,
+        startedAt: null,
+        isRunning: false,
+      });
+      renderFocusTimer(focusTimerState);
+    } else {
+      startFocusTimerTicker();
+    }
+  }
+
+  startBtn.addEventListener("click", async () => {
+    const inputMinutes = Math.max(1, Number(minutesInput.value) || 25);
+    if (!focusTimerState.isRunning && focusTimerState.elapsedMs <= 0) {
+      const durationMs = inputMinutes * 60 * 1000;
+      focusTimerState = await setClockTimerState({
+        durationMs,
+        elapsedMs: 0,
+        startedAt: Date.now(),
+        isRunning: true,
+      });
+      renderFocusTimer(focusTimerState);
+      startFocusTimerTicker();
+      return;
+    }
+
+    if (!focusTimerState.isRunning && focusTimerState.elapsedMs > 0 && focusTimerState.elapsedMs < focusTimerState.durationMs) {
+      focusTimerState = await setClockTimerState({
+        ...focusTimerState,
+        startedAt: Date.now(),
+        isRunning: true,
+      });
+      renderFocusTimer(focusTimerState);
+      startFocusTimerTicker();
+      return;
+    }
+
+    if (!focusTimerState.isRunning && focusTimerState.elapsedMs >= focusTimerState.durationMs) {
+      const durationMs = inputMinutes * 60 * 1000;
+      focusTimerState = await setClockTimerState({
+        durationMs,
+        elapsedMs: 0,
+        startedAt: Date.now(),
+        isRunning: true,
+      });
+      renderFocusTimer(focusTimerState);
+      startFocusTimerTicker();
+    }
+  });
+
+  pauseBtn.addEventListener("click", async () => {
+    if (!focusTimerState.isRunning) return;
+    const liveElapsed = getLiveTimerElapsedMs(focusTimerState);
+    focusTimerState = await setClockTimerState({
+      ...focusTimerState,
+      elapsedMs: Math.min(focusTimerState.durationMs, liveElapsed),
+      startedAt: null,
+      isRunning: false,
+    });
+    renderFocusTimer(focusTimerState);
+    stopFocusTimerTicker();
+  });
+
+  resetBtn.addEventListener("click", async () => {
+    const inputMinutes = Math.max(1, Number(minutesInput.value) || 25);
+    focusTimerState = await setClockTimerState({
+      durationMs: inputMinutes * 60 * 1000,
+      elapsedMs: 0,
+      startedAt: null,
+      isRunning: false,
+    });
+    renderFocusTimer(focusTimerState);
+    stopFocusTimerTicker();
+  });
+
+  minutesInput.addEventListener("change", async () => {
+    if (focusTimerState.isRunning) return;
+    const inputMinutes = Math.max(1, Number(minutesInput.value) || 25);
+    const nextDuration = inputMinutes * 60 * 1000;
+    focusTimerState = await setClockTimerState({
+      durationMs: nextDuration,
+      elapsedMs: Math.min(focusTimerState.elapsedMs, nextDuration),
+      startedAt: null,
+      isRunning: false,
+    });
+    renderFocusTimer(focusTimerState);
+  });
+}
+
 function setMeditationPhase(phase) {
   const card = document.getElementById("meditationCard");
   const breathText = document.getElementById("breathText");
@@ -711,6 +930,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   await renderSites();
   await initQuickNotes();
   initMeditation();
+  await initFocusTimer();
 
   const state = await renderQuote();
   lastIndex = state.index;

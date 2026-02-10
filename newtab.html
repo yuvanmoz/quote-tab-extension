@@ -93,6 +93,25 @@
             <button id="meditationStop" type="button" class="ghost">Stop</button>
           </div>
         </section>
+
+        <section class="timer-card" id="focusTimerCard" aria-label="Focus timer">
+          <div class="timer-head">
+            <span class="timer-title">Timer</span>
+            <span class="timer-status" id="focusTimerStatus">Idle</span>
+          </div>
+          <div class="timer-display" id="focusTimerDisplay">25:00</div>
+          <div class="timer-meta" id="focusTimerMeta">Progress appears on floating clock</div>
+          <div class="timer-duration-row">
+            <label for="focusTimerMinutes">Duration</label>
+            <input id="focusTimerMinutes" type="number" min="1" max="180" step="1" value="25" />
+            <span class="timer-unit">min</span>
+          </div>
+          <div class="timer-controls">
+            <button id="focusTimerStart" type="button">Start</button>
+            <button id="focusTimerPause" type="button" class="ghost">Pause</button>
+            <button id="focusTimerReset" type="button" class="ghost">Reset</button>
+          </div>
+        </section>
       </aside>
     </div>
 

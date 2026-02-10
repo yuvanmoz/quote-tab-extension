@@ -227,11 +227,11 @@ button.danger {
 }
 
 .clock-theme-row {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  min-width: 280px;
+  justify-content: flex-start;
+  gap: 12px;
+  width: fit-content;
 }
 
 .clock-toggle-copy {

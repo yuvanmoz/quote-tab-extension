@@ -1,6 +1,7 @@
 const CLOCK_ENABLED_KEY = "floating_clock_enabled";
 const CLOCK_POS_KEY = "floating_clock_pos";
 const CLOCK_THEME_KEY = "floating_clock_theme";
+const CLOCK_TIMER_STATE_KEY = "floating_clock_timer_state";
 
 function isValidClockTheme(value) {
   return value === "light" || value === "dark";
@@ -13,6 +14,7 @@ function getClockSettings() {
         [CLOCK_ENABLED_KEY]: false,
         [CLOCK_POS_KEY]: null,
         [CLOCK_THEME_KEY]: "dark",
+        [CLOCK_TIMER_STATE_KEY]: null,
       },
       (data) => resolve(data)
     );
@@ -56,8 +58,39 @@ function applyClockPos(element, pos) {
 function createClock() {
   const clock = document.createElement("div");
   clock.id = "nt-floating-clock";
-  clock.textContent = formatLocalTime();
+  const fill = document.createElement("span");
+  fill.className = "nt-clock-fill";
+  const text = document.createElement("span");
+  text.className = "nt-clock-text";
+  text.textContent = formatLocalTime();
+  clock.append(fill, text);
   return clock;
+}
+
+function sanitizeTimerState(raw) {
+  const durationMs = Math.max(60 * 1000, Number(raw?.durationMs) || 25 * 60 * 1000);
+  const elapsedMs = Math.min(Math.max(0, Number(raw?.elapsedMs) || 0), durationMs);
+  const startedAt = typeof raw?.startedAt === "number" ? raw.startedAt : null;
+  const isRunning = Boolean(raw?.isRunning && startedAt);
+  return { durationMs, elapsedMs, startedAt, isRunning };
+}
+
+function getTimerProgress(timerState) {
+  const state = sanitizeTimerState(timerState);
+  if (!state.isRunning && state.elapsedMs <= 0) return 0;
+  if (state.durationMs <= 0) return 0;
+  const liveElapsed = state.isRunning
+    ? state.elapsedMs + Math.max(0, Date.now() - state.startedAt)
+    : state.elapsedMs;
+  return Math.min(1, Math.max(0, liveElapsed / state.durationMs));
+}
+
+function applyClockFill(clock, timerState) {
+  const fill = clock.querySelector(".nt-clock-fill");
+  if (!fill) return;
+  const progress = getTimerProgress(timerState);
+  fill.style.transform = `scaleX(${progress})`;
+  fill.style.opacity = progress > 0 ? "1" : "0";
 }
 
 function applyClockTheme(element, theme) {
@@ -71,10 +104,13 @@ async function initFloatingClock() {
 
   const settings = await getClockSettings();
   if (!settings[CLOCK_ENABLED_KEY]) return;
+  let timerState = sanitizeTimerState(settings[CLOCK_TIMER_STATE_KEY]);
 
   const clock = createClock();
+  const text = clock.querySelector(".nt-clock-text");
   applyClockTheme(clock, settings[CLOCK_THEME_KEY]);
   document.body.appendChild(clock);
+  applyClockFill(clock, timerState);
 
   const rect = clock.getBoundingClientRect();
   const defaultPos = {
@@ -87,13 +123,19 @@ async function initFloatingClock() {
   applyClockPos(clock, startPos);
 
   const timeTimer = setInterval(() => {
-    clock.textContent = formatLocalTime();
+    if (text) {
+      text.textContent = formatLocalTime();
+    }
   }, 1000);
+  const fillTimer = setInterval(() => {
+    applyClockFill(clock, timerState);
+  }, 200);
 
   let dragState = null;
 
   function teardown() {
     clearInterval(timeTimer);
+    clearInterval(fillTimer);
     window.removeEventListener("resize", onResize);
     chrome.storage.onChanged.removeListener(onStorageChanged);
     if (clock.parentNode) clock.parentNode.removeChild(clock);
@@ -121,6 +163,11 @@ async function initFloatingClock() {
 
     if (changes[CLOCK_THEME_KEY] && clock.parentNode) {
       applyClockTheme(clock, changes[CLOCK_THEME_KEY].newValue);
+    }
+
+    if (changes[CLOCK_TIMER_STATE_KEY] && clock.parentNode) {
+      timerState = sanitizeTimerState(changes[CLOCK_TIMER_STATE_KEY].newValue);
+      applyClockFill(clock, timerState);
     }
   }
 

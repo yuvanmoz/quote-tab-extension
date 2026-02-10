@@ -91,13 +91,11 @@ function initClockSettings() {
   const clockThemeLight = document.getElementById("clockThemeLight");
   const clockThemeLabel = document.getElementById("clockThemeLabel");
   if (!clockEnabled || !resetClockPos || !clockThemeLight || !clockThemeLabel) return;
-
   function applyClockThemeLabel(theme) {
     clockThemeLabel.textContent = theme === "light" ? "Light" : "Dark";
   }
 
   chrome.storage.sync.get(
-    { [CLOCK_ENABLED_KEY]: false, [CLOCK_THEME_KEY]: "dark" },
     (data) => {
       clockEnabled.checked = Boolean(data[CLOCK_ENABLED_KEY]);
       const theme = data[CLOCK_THEME_KEY] === "light" ? "light" : "dark";

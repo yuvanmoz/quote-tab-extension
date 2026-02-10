@@ -1,5 +1,8 @@
 #nt-floating-clock {
   position: fixed;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   left: 24px;
   top: 24px;
   z-index: 2147483645;
@@ -14,7 +17,24 @@
   user-select: none;
   cursor: grab;
   white-space: nowrap;
+  overflow: hidden;
   transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#nt-floating-clock .nt-clock-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  transform-origin: left center;
+  transform: scaleX(0);
+  opacity: 0;
+  transition: transform 0.2s linear, opacity 0.2s linear;
+  pointer-events: none;
+}
+
+#nt-floating-clock .nt-clock-text {
+  position: relative;
+  z-index: 1;
 }
 
 #nt-floating-clock.clock-theme-dark {
@@ -24,11 +44,19 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
 }
 
+#nt-floating-clock.clock-theme-dark .nt-clock-fill {
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.46), rgba(34, 211, 238, 0.36));
+}
+
 #nt-floating-clock.clock-theme-light {
   border: 1px solid rgba(35, 37, 43, 0.14);
   background: rgba(249, 250, 252, 0.78);
   color: #1f2329;
   box-shadow: 0 8px 24px rgba(10, 14, 22, 0.16);
+}
+
+#nt-floating-clock.clock-theme-light .nt-clock-fill {
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.22), rgba(20, 184, 166, 0.2));
 }
 
 #nt-floating-clock.nt-dragging {
