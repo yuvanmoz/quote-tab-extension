@@ -7,12 +7,19 @@ const DELETE_SPEED_MS = 28;
 const HOLD_AFTER_TYPE_MS = 1600;
 const HOLD_AFTER_DELETE_MS = 320;
 const NOTE_SAVE_DEBOUNCE_MS = 250;
+const BREATH_IN_MS = 4000;
+const BREATH_OUT_MS = 4000;
 let editIndex = null;
 let dndReady = false;
 let escHandler = null;
 let typewriterTimer = null;
 let typewriterRunId = 0;
 let noteSaveTimer = null;
+let meditationTickTimer = null;
+let meditationPhaseTimer = null;
+let meditationEndAt = 0;
+let meditationRunning = false;
+let meditationPhase = "exhale";
 
 function clearTypewriter() {
   if (typewriterTimer) {
@@ -537,6 +544,103 @@ async function initQuickNotes() {
   });
 }
 
+function formatSeconds(totalSeconds) {
+  const sec = Math.max(0, Math.floor(totalSeconds));
+  const mm = Math.floor(sec / 60).toString().padStart(2, "0");
+  const ss = (sec % 60).toString().padStart(2, "0");
+  return `${mm}:${ss}`;
+}
+
+function setMeditationPhase(phase) {
+  const card = document.getElementById("meditationCard");
+  const breathText = document.getElementById("breathText");
+  if (!card || !breathText) return;
+
+  meditationPhase = phase;
+  card.classList.remove("is-inhale", "is-exhale");
+  card.classList.add(phase === "inhale" ? "is-inhale" : "is-exhale");
+  breathText.textContent = phase === "inhale" ? "Breathe in" : "Breathe out";
+}
+
+function stopMeditation(keepTimer = false) {
+  meditationRunning = false;
+  if (meditationTickTimer) {
+    clearInterval(meditationTickTimer);
+    meditationTickTimer = null;
+  }
+  if (meditationPhaseTimer) {
+    clearTimeout(meditationPhaseTimer);
+    meditationPhaseTimer = null;
+  }
+
+  const startBtn = document.getElementById("meditationStart");
+  const timer = document.getElementById("meditationTimer");
+  const breathText = document.getElementById("breathText");
+  const card = document.getElementById("meditationCard");
+  if (startBtn) startBtn.textContent = "Start";
+  if (card) card.classList.remove("is-inhale", "is-exhale");
+  if (breathText) breathText.textContent = "Ready";
+  if (!keepTimer && timer) timer.textContent = "00:00";
+}
+
+function scheduleMeditationPhaseSwitch() {
+  if (!meditationRunning) return;
+  const nextPhase = meditationPhase === "inhale" ? "exhale" : "inhale";
+  const waitMs = meditationPhase === "inhale" ? BREATH_IN_MS : BREATH_OUT_MS;
+
+  meditationPhaseTimer = setTimeout(() => {
+    if (!meditationRunning) return;
+    setMeditationPhase(nextPhase);
+    scheduleMeditationPhaseSwitch();
+  }, waitMs);
+}
+
+function startMeditation(minutes) {
+  const durationMs = Math.max(1, minutes) * 60 * 1000;
+  const timer = document.getElementById("meditationTimer");
+  const startBtn = document.getElementById("meditationStart");
+
+  stopMeditation(true);
+  meditationRunning = true;
+  meditationEndAt = Date.now() + durationMs;
+  if (startBtn) startBtn.textContent = "Running";
+  setMeditationPhase("inhale");
+
+  if (timer) {
+    timer.textContent = formatSeconds(Math.ceil(durationMs / 1000));
+  }
+
+  meditationTickTimer = setInterval(() => {
+    const secondsLeft = Math.ceil((meditationEndAt - Date.now()) / 1000);
+    if (timer) {
+      timer.textContent = formatSeconds(secondsLeft);
+    }
+    if (secondsLeft <= 0) {
+      stopMeditation(false);
+    }
+  }, 250);
+
+  scheduleMeditationPhaseSwitch();
+}
+
+function initMeditation() {
+  const durationSelect = document.getElementById("meditationMinutes");
+  const startBtn = document.getElementById("meditationStart");
+  const stopBtn = document.getElementById("meditationStop");
+
+  if (!durationSelect || !startBtn || !stopBtn) return;
+
+  startBtn.addEventListener("click", () => {
+    if (meditationRunning) return;
+    const minutes = Number(durationSelect.value || "3");
+    startMeditation(minutes);
+  });
+
+  stopBtn.addEventListener("click", () => {
+    stopMeditation(false);
+  });
+}
+
 function calculateYearProgress() {
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -606,6 +710,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupContainerDnD();
   await renderSites();
   await initQuickNotes();
+  initMeditation();
 
   const state = await renderQuote();
   lastIndex = state.index;

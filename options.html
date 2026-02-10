@@ -67,6 +67,38 @@
       </div>
     </section>
 
+    <section class="panel">
+      <div class="panel-title">
+        <h2>Floating Clock</h2>
+        <span class="panel-hint">Global overlay</span>
+      </div>
+      <p>Show a draggable floating clock on web pages. Uses local computer time in 12-hour format with AM/PM.</p>
+      <div class="row">
+        <div class="clock-toggle-row">
+          <div class="clock-toggle-copy">
+            <div class="clock-toggle-label">Turn on floating clock</div>
+            <div class="clock-toggle-sub">Compact draggable clock on websites</div>
+          </div>
+          <label class="clock-switch" for="clockEnabled" aria-label="Turn on floating clock">
+            <input id="clockEnabled" type="checkbox" />
+            <span class="clock-switch-track"></span>
+          </label>
+        </div>
+        <button id="resetClockPos" type="button">Reset position</button>
+      </div>
+      <div class="clock-theme-row">
+        <div class="clock-toggle-copy">
+          <div class="clock-toggle-label">Clock theme</div>
+          <div class="clock-toggle-sub"><span id="clockThemeLabel">Dark</span> mode</div>
+        </div>
+        <label class="clock-switch" for="clockThemeLight" aria-label="Use light clock theme">
+          <input id="clockThemeLight" type="checkbox" />
+          <span class="clock-switch-track"></span>
+        </label>
+      </div>
+      <div id="clockStatus" class="status"></div>
+    </section>
+
     <section class="panel list-panel">
       <div class="row">
         <h2>Your quotes</h2>

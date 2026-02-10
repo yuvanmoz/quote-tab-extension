@@ -1,6 +1,9 @@
 const QUOTES_KEY = "quotes";
 const THEME_KEY = "theme";
 const WHITELIST_KEY = "whitelist";
+const CLOCK_ENABLED_KEY = "floating_clock_enabled";
+const CLOCK_POS_KEY = "floating_clock_pos";
+const CLOCK_THEME_KEY = "floating_clock_theme";
 
 function getQuotes() {
   return new Promise((resolve) => {
@@ -67,6 +70,59 @@ function initWhitelist() {
         status.textContent = "Saved";
         setTimeout(() => (status.textContent = ""), 1500);
       }
+    });
+  });
+}
+
+function setClockStatus(message) {
+  const status = document.getElementById("clockStatus");
+  if (!status) return;
+  status.textContent = message;
+  setTimeout(() => {
+    if (status.textContent === message) {
+      status.textContent = "";
+    }
+  }, 1400);
+}
+
+function initClockSettings() {
+  const clockEnabled = document.getElementById("clockEnabled");
+  const resetClockPos = document.getElementById("resetClockPos");
+  const clockThemeLight = document.getElementById("clockThemeLight");
+  const clockThemeLabel = document.getElementById("clockThemeLabel");
+  if (!clockEnabled || !resetClockPos || !clockThemeLight || !clockThemeLabel) return;
+
+  function applyClockThemeLabel(theme) {
+    clockThemeLabel.textContent = theme === "light" ? "Light" : "Dark";
+  }
+
+  chrome.storage.sync.get(
+    { [CLOCK_ENABLED_KEY]: false, [CLOCK_THEME_KEY]: "dark" },
+    (data) => {
+      clockEnabled.checked = Boolean(data[CLOCK_ENABLED_KEY]);
+      const theme = data[CLOCK_THEME_KEY] === "light" ? "light" : "dark";
+      clockThemeLight.checked = theme === "light";
+      applyClockThemeLabel(theme);
+    }
+  );
+
+  clockEnabled.addEventListener("change", () => {
+    chrome.storage.sync.set({ [CLOCK_ENABLED_KEY]: clockEnabled.checked }, () => {
+      setClockStatus("Clock setting saved");
+    });
+  });
+
+  clockThemeLight.addEventListener("change", () => {
+    const theme = clockThemeLight.checked ? "light" : "dark";
+    chrome.storage.sync.set({ [CLOCK_THEME_KEY]: theme }, () => {
+      applyClockThemeLabel(theme);
+      setClockStatus("Clock theme saved");
+    });
+  });
+
+  resetClockPos.addEventListener("click", () => {
+    chrome.storage.sync.remove(CLOCK_POS_KEY, () => {
+      setClockStatus("Clock position reset");
     });
   });
 }
@@ -331,6 +387,7 @@ async function exportQuotes() {
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
   initWhitelist();
+  initClockSettings();
   document.getElementById("addQuote").addEventListener("click", addQuote);
   document.getElementById("importQuotes").addEventListener("click", importQuotes);
   document.getElementById("exportQuotes").addEventListener("click", exportQuotes);

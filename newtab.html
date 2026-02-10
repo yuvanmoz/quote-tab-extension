@@ -40,8 +40,12 @@
           <blockquote class="quote-text" id="quoteText"></blockquote>
           <div class="quote-author" id="quoteAuthor"></div>
           <div class="actions">
-            <button id="nextQuote" type="button">Next quote</button>
-            <button id="manageQuotes" type="button">Manage quotes</button>
+            <button id="nextQuote" type="button" class="icon-action" aria-label="Next quote" title="Next quote">
+              <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+                <path d="M6 17L11 12L6 7M13 17L18 12L13 7" />
+              </svg>
+            </button>
+            <button id="manageQuotes" type="button" class="settings-button" aria-label="Settings" title="Settings">Settings</button>
           </div>
         </section>
 
@@ -52,13 +56,43 @@
         </section>
       </div>
 
-      <aside class="quick-notes is-collapsed" id="quickNotes" aria-label="Quick notes">
-        <div class="quick-notes-head">
-          <span class="quick-notes-title">Quick Notes</span>
-          <button id="notesToggle" class="quick-notes-toggle" type="button" aria-expanded="false" aria-label="Expand notes">+</button>
-        </div>
-        <button id="notesPreview" class="quick-notes-preview" type="button">Add a quick reminder...</button>
-        <textarea id="notesInput" class="quick-notes-input" rows="5" placeholder="Write a quick reminder..."></textarea>
+      <aside class="right-rail" aria-label="Right rail">
+        <section class="quick-notes is-collapsed" id="quickNotes" aria-label="Quick notes">
+          <div class="quick-notes-head">
+            <span class="quick-notes-title">Quick Notes</span>
+            <button id="notesToggle" class="quick-notes-toggle" type="button" aria-expanded="false" aria-label="Expand notes">+</button>
+          </div>
+          <button id="notesPreview" class="quick-notes-preview" type="button">Add a quick reminder...</button>
+          <textarea id="notesInput" class="quick-notes-input" rows="5" placeholder="Write a quick reminder..."></textarea>
+        </section>
+
+        <section class="meditation-card" id="meditationCard" aria-label="Breathing meditation">
+          <div class="meditation-head">
+            <span class="meditation-title">Breathing</span>
+            <span class="meditation-timer" id="meditationTimer">00:00</span>
+          </div>
+          <div class="breath-text" id="breathText">Ready</div>
+          <div class="breath-orb-wrap">
+            <div class="breath-orb" id="breathOrb"></div>
+          </div>
+          <p class="meditation-mantra">I'm not the body, I'm not even the mind</p>
+          <div class="meditation-controls">
+            <select id="meditationMinutes" class="meditation-select" aria-label="Meditation duration">
+              <option value="1">1m</option>
+              <option value="2">2m</option>
+              <option value="3" selected>3m</option>
+              <option value="4">4m</option>
+              <option value="5">5m</option>
+              <option value="6">6m</option>
+              <option value="7">7m</option>
+              <option value="8">8m</option>
+              <option value="9">9m</option>
+              <option value="10">10m</option>
+            </select>
+            <button id="meditationStart" type="button">Start</button>
+            <button id="meditationStop" type="button" class="ghost">Stop</button>
+          </div>
+        </section>
       </aside>
     </div>
 

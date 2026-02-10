@@ -52,15 +52,10 @@ function createOverlay() {
   list.id = "nt-tab-list";
   panel.appendChild(list);
 
-  const debug = document.createElement("div");
-  debug.id = "nt-debug";
-  debug.textContent = "Overlay active";
-
   document.body.appendChild(hoverZone);
   document.body.appendChild(panel);
-  document.body.appendChild(debug);
 
-  return { hoverZone, panel, list, debug };
+  return { hoverZone, panel, list };
 }
 
 let hideTimer = null;
@@ -132,8 +127,7 @@ async function initOverlay() {
   const whitelist = await getWhitelist();
   const hostname = normalizeHost(window.location.hostname);
   if (!matchesWhitelist(hostname, whitelist)) return;
-
-  const { hoverZone, panel, list, debug } = createOverlay();
+  const { hoverZone, panel, list } = createOverlay();
 
   // Track if mouse is in the hover zone or panel
   let mouseInHoverZone = false;
@@ -202,7 +196,6 @@ async function initOverlay() {
     if (!matchesWhitelist(hostname, next)) {
       hoverZone.remove();
       panel.remove();
-      debug.remove();
     }
   });
 }

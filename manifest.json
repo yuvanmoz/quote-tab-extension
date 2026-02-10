@@ -17,6 +17,11 @@
       "matches": ["https://*/*", "http://*/*"],
       "js": ["fullscreen_overlay.js"],
       "css": ["fullscreen_overlay.css"]
+    },
+    {
+      "matches": ["https://*/*", "http://*/*"],
+      "js": ["floating_clock.js"],
+      "css": ["floating_clock.css"]
     }
   ]
 }

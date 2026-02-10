@@ -1,0 +1,36 @@
+#nt-floating-clock {
+  position: fixed;
+  left: 24px;
+  top: 24px;
+  z-index: 2147483645;
+  border-radius: 999px;
+  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: 0.4px;
+  padding: 12px 22px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  user-select: none;
+  cursor: grab;
+  white-space: nowrap;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#nt-floating-clock.clock-theme-dark {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(34, 34, 38, 0.72);
+  color: #f4f4f6;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+#nt-floating-clock.clock-theme-light {
+  border: 1px solid rgba(35, 37, 43, 0.14);
+  background: rgba(249, 250, 252, 0.78);
+  color: #1f2329;
+  box-shadow: 0 8px 24px rgba(10, 14, 22, 0.16);
+}
+
+#nt-floating-clock.nt-dragging {
+  cursor: grabbing;
+}
