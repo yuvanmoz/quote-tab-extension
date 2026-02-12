@@ -2,6 +2,7 @@ const QUOTES_KEY = "quotes";
 const THEME_KEY = "theme";
 const SITES_KEY = "sites";
 const NOTE_KEY = "quick_note";
+const NOTE_INTENTS = ["default", "focus", "urgent", "idea"];
 const CLOCK_TIMER_STATE_KEY = "floating_clock_timer_state";
 const TYPE_SPEED_MS = 45;
 const DELETE_SPEED_MS = 28;
@@ -21,6 +22,52 @@ let meditationPhaseTimer = null;
 let meditationEndAt = 0;
 let meditationRunning = false;
 let meditationPhase = "exhale";
+let quickNoteState = null;
+
+function defaultQuickNoteState() {
+  return {
+    text: "",
+    intent: "default",
+    checklist: [],
+  };
+}
+
+function makeChecklistItemId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function sanitizeQuickNoteState(raw) {
+  if (typeof raw === "string") {
+    return {
+      ...defaultQuickNoteState(),
+      text: raw.trim(),
+    };
+  }
+
+  const state = raw && typeof raw === "object" ? raw : defaultQuickNoteState();
+  const text = (state.text || "").toString();
+  const intent = NOTE_INTENTS.includes(state.intent) ? state.intent : "default";
+  const checklist = Array.isArray(state.checklist)
+    ? state.checklist
+        .map((item) => {
+          if (typeof item === "string") {
+            const value = item.trim();
+            if (!value) return null;
+            return { id: makeChecklistItemId(), text: value, done: false };
+          }
+          const value = (item && item.text ? item.text : "").toString().trim();
+          if (!value) return null;
+          return {
+            id: (item.id || makeChecklistItemId()).toString(),
+            text: value,
+            done: Boolean(item.done),
+          };
+        })
+        .filter(Boolean)
+    : [];
+
+  return { text, intent, checklist };
+}
 let focusTimerTick = null;
 let focusTimerState = {
   durationMs: 25 * 60 * 1000,
@@ -131,17 +178,17 @@ function setSites(sites) {
   });
 }
 
-function getQuickNote() {
+function getQuickNoteState() {
   return new Promise((resolve) => {
-    chrome.storage.sync.get({ [NOTE_KEY]: "" }, (data) => {
-      resolve((data[NOTE_KEY] || "").toString());
+    chrome.storage.sync.get({ [NOTE_KEY]: defaultQuickNoteState() }, (data) => {
+      resolve(sanitizeQuickNoteState(data[NOTE_KEY]));
     });
   });
 }
 
-function setQuickNote(value) {
+function setQuickNoteState(state) {
   return new Promise((resolve) => {
-    chrome.storage.sync.set({ [NOTE_KEY]: value }, () => resolve());
+    chrome.storage.sync.set({ [NOTE_KEY]: sanitizeQuickNoteState(state) }, () => resolve());
   });
 }
 
@@ -516,19 +563,81 @@ function setNotesExpanded(expanded) {
   }
 }
 
-function updateNotesPreview(text) {
+function updateNotesPreview(state) {
   const preview = document.getElementById("notesPreview");
   if (!preview) return;
-  const normalized = (text || "").replace(/\s+/g, " ").trim();
-  preview.textContent = normalized || "Add a quick reminder...";
+  const normalized = (state.text || "").replace(/\s+/g, " ").trim();
+  const openCount = state.checklist.filter((item) => !item.done).length;
+  if (normalized) {
+    preview.textContent = normalized;
+    return;
+  }
+  if (openCount > 0) {
+    preview.textContent = `${openCount} checklist item${openCount === 1 ? "" : "s"} pending`;
+    return;
+  }
+  preview.textContent = "Add a quick reminder...";
 }
 
-function scheduleNoteSave(text) {
+function renderNoteIntent(state) {
+  const notesBox = document.getElementById("quickNotes");
+  const buttons = document.querySelectorAll("[data-intent-value]");
+  if (notesBox) {
+    notesBox.dataset.intent = state.intent;
+  }
+  buttons.forEach((button) => {
+    const active = button.dataset.intentValue === state.intent;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+}
+
+function renderChecklist(state) {
+  const list = document.getElementById("notesChecklist");
+  if (!list) return;
+  list.innerHTML = "";
+
+  if (state.checklist.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "checklist-item checklist-empty";
+    empty.innerHTML = '<span class="checklist-text">No checklist items</span>';
+    list.appendChild(empty);
+    return;
+  }
+
+  state.checklist.forEach((item) => {
+    const li = document.createElement("li");
+    li.className = `checklist-item${item.done ? " is-done" : ""}`;
+    li.dataset.itemId = item.id;
+
+    const check = document.createElement("input");
+    check.type = "checkbox";
+    check.checked = item.done;
+    check.dataset.itemId = item.id;
+    check.setAttribute("aria-label", `Toggle ${item.text}`);
+
+    const text = document.createElement("span");
+    text.className = "checklist-text";
+    text.textContent = item.text;
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "checklist-remove ghost";
+    remove.textContent = "x";
+    remove.dataset.itemId = item.id;
+    remove.setAttribute("aria-label", `Remove ${item.text}`);
+
+    li.append(check, text, remove);
+    list.appendChild(li);
+  });
+}
+
+function scheduleNoteSave() {
   if (noteSaveTimer) {
     clearTimeout(noteSaveTimer);
   }
   noteSaveTimer = setTimeout(() => {
-    setQuickNote(text);
+    setQuickNoteState(quickNoteState);
   }, NOTE_SAVE_DEBOUNCE_MS);
 }
 
@@ -537,11 +646,18 @@ async function initQuickNotes() {
   const toggle = document.getElementById("notesToggle");
   const preview = document.getElementById("notesPreview");
   const input = document.getElementById("notesInput");
-  if (!notesBox || !toggle || !preview || !input) return;
+  const checklistInput = document.getElementById("checklistInput");
+  const checklistAdd = document.getElementById("checklistAdd");
+  const checklistList = document.getElementById("notesChecklist");
+  const intentButtons = document.querySelectorAll("[data-intent-value]");
+  if (!notesBox || !toggle || !preview || !input || !checklistInput || !checklistAdd || !checklistList) return;
 
-  const saved = await getQuickNote();
-  input.value = saved;
-  updateNotesPreview(saved);
+  const savedState = await getQuickNoteState();
+  quickNoteState = savedState;
+  input.value = quickNoteState.text;
+  updateNotesPreview(quickNoteState);
+  renderNoteIntent(quickNoteState);
+  renderChecklist(quickNoteState);
   setNotesExpanded(false);
 
   toggle.addEventListener("click", () => {
@@ -554,9 +670,9 @@ async function initQuickNotes() {
   });
 
   input.addEventListener("input", () => {
-    const text = input.value;
-    updateNotesPreview(text);
-    scheduleNoteSave(text);
+    quickNoteState.text = input.value;
+    updateNotesPreview(quickNoteState);
+    scheduleNoteSave();
   });
 
   input.addEventListener("blur", () => {
@@ -573,6 +689,62 @@ async function initQuickNotes() {
       input.blur();
       setNotesExpanded(false);
     }
+  });
+
+  intentButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const intent = button.dataset.intentValue;
+      if (!NOTE_INTENTS.includes(intent)) return;
+      quickNoteState.intent = intent;
+      renderNoteIntent(quickNoteState);
+      scheduleNoteSave();
+    });
+  });
+
+  function addChecklistItem() {
+    const text = checklistInput.value.trim();
+    if (!text) return;
+    quickNoteState.checklist.push({
+      id: makeChecklistItemId(),
+      text,
+      done: false,
+    });
+    checklistInput.value = "";
+    renderChecklist(quickNoteState);
+    updateNotesPreview(quickNoteState);
+    scheduleNoteSave();
+  }
+
+  checklistAdd.addEventListener("click", addChecklistItem);
+  checklistInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addChecklistItem();
+    }
+  });
+
+  checklistList.addEventListener("change", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement) || target.type !== "checkbox") return;
+    const itemId = target.dataset.itemId;
+    if (!itemId) return;
+    const item = quickNoteState.checklist.find((entry) => entry.id === itemId);
+    if (!item) return;
+    item.done = target.checked;
+    renderChecklist(quickNoteState);
+    updateNotesPreview(quickNoteState);
+    scheduleNoteSave();
+  });
+
+  checklistList.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement) || !target.classList.contains("checklist-remove")) return;
+    const itemId = target.dataset.itemId;
+    if (!itemId) return;
+    quickNoteState.checklist = quickNoteState.checklist.filter((entry) => entry.id !== itemId);
+    renderChecklist(quickNoteState);
+    updateNotesPreview(quickNoteState);
+    scheduleNoteSave();
   });
 }
 

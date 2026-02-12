@@ -63,7 +63,20 @@
             <button id="notesToggle" class="quick-notes-toggle" type="button" aria-expanded="false" aria-label="Expand notes">+</button>
           </div>
           <button id="notesPreview" class="quick-notes-preview" type="button">Add a quick reminder...</button>
+          <div class="intent-row" id="notesIntentRow" aria-label="Note intent">
+            <button type="button" class="intent-chip is-active" data-intent-value="default" aria-pressed="true">Default</button>
+            <button type="button" class="intent-chip" data-intent-value="focus" aria-pressed="false">Focus</button>
+            <button type="button" class="intent-chip" data-intent-value="urgent" aria-pressed="false">Urgent</button>
+            <button type="button" class="intent-chip" data-intent-value="idea" aria-pressed="false">Idea</button>
+          </div>
           <textarea id="notesInput" class="quick-notes-input" rows="5" placeholder="Write a quick reminder..."></textarea>
+          <div class="checklist-wrap">
+            <div class="checklist-input-row">
+              <input id="checklistInput" type="text" placeholder="Add checklist item..." />
+              <button id="checklistAdd" type="button" class="ghost">Add</button>
+            </div>
+            <ul id="notesChecklist" class="checklist-list" aria-label="Checklist"></ul>
+          </div>
         </section>
 
         <section class="meditation-card" id="meditationCard" aria-label="Breathing meditation">

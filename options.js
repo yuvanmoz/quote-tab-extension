@@ -4,6 +4,7 @@ const WHITELIST_KEY = "whitelist";
 const CLOCK_ENABLED_KEY = "floating_clock_enabled";
 const CLOCK_POS_KEY = "floating_clock_pos";
 const CLOCK_THEME_KEY = "floating_clock_theme";
+const CLOCK_SOUND_ENABLED_KEY = "floating_clock_sound_enabled";
 
 function getQuotes() {
   return new Promise((resolve) => {
@@ -90,17 +91,24 @@ function initClockSettings() {
   const resetClockPos = document.getElementById("resetClockPos");
   const clockThemeLight = document.getElementById("clockThemeLight");
   const clockThemeLabel = document.getElementById("clockThemeLabel");
-  if (!clockEnabled || !resetClockPos || !clockThemeLight || !clockThemeLabel) return;
+  const clockSoundEnabled = document.getElementById("clockSoundEnabled");
+  if (!clockEnabled || !resetClockPos || !clockThemeLight || !clockThemeLabel || !clockSoundEnabled) return;
   function applyClockThemeLabel(theme) {
     clockThemeLabel.textContent = theme === "light" ? "Light" : "Dark";
   }
 
   chrome.storage.sync.get(
+    {
+      [CLOCK_ENABLED_KEY]: false,
+      [CLOCK_THEME_KEY]: "dark",
+      [CLOCK_SOUND_ENABLED_KEY]: false,
+    },
     (data) => {
       clockEnabled.checked = Boolean(data[CLOCK_ENABLED_KEY]);
       const theme = data[CLOCK_THEME_KEY] === "light" ? "light" : "dark";
       clockThemeLight.checked = theme === "light";
       applyClockThemeLabel(theme);
+      clockSoundEnabled.checked = Boolean(data[CLOCK_SOUND_ENABLED_KEY]);
     }
   );
 
@@ -115,6 +123,12 @@ function initClockSettings() {
     chrome.storage.sync.set({ [CLOCK_THEME_KEY]: theme }, () => {
       applyClockThemeLabel(theme);
       setClockStatus("Clock theme saved");
+    });
+  });
+
+  clockSoundEnabled.addEventListener("change", () => {
+    chrome.storage.sync.set({ [CLOCK_SOUND_ENABLED_KEY]: clockSoundEnabled.checked }, () => {
+      setClockStatus("Clock sound setting saved");
     });
   });
 

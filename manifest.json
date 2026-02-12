@@ -23,5 +23,11 @@
       "js": ["floating_clock.js"],
       "css": ["floating_clock.css"]
     }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["asset/mixkit-magic-notification-ring-2344.wav"],
+      "matches": ["https://*/*", "http://*/*"]
+    }
   ]
 }
