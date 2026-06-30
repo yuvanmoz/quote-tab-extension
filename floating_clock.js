@@ -61,6 +61,8 @@ function applyClockPos(element, pos) {
 function createClock() {
   const clock = document.createElement("div");
   clock.id = "nt-floating-clock";
+  clock.title = "Drag to reposition";
+  clock.setAttribute("role", "timer");
   const fill = document.createElement("span");
   fill.className = "nt-clock-fill";
   const text = document.createElement("span");
@@ -102,30 +104,7 @@ function applyClockTheme(element, theme) {
   element.classList.add(`clock-theme-${resolvedTheme}`);
 }
 
-let clockAlertAudio = null;
 
-function getClockAlertAudio() {
-  if (clockAlertAudio) return clockAlertAudio;
-  const audio = new Audio(chrome.runtime.getURL(CLOCK_SOUND_FILE_PATH));
-  audio.preload = "auto";
-  audio.volume = 0.9;
-  clockAlertAudio = audio;
-  return clockAlertAudio;
-}
-
-function playClockAlertSound() {
-  try {
-    const audio = getClockAlertAudio();
-    audio.currentTime = 0;
-    audio.play().catch(() => {});
-  } catch (err) {
-    // no-op: some pages may block audio until user gesture
-  }
-}
-
-function shouldPlayFiveMinuteAlert(now) {
-  return now.getSeconds() === 50 && ((now.getMinutes() + 1) % 5 === 0);
-}
 
 async function initFloatingClock() {
   if (window !== window.top) return;
@@ -133,8 +112,6 @@ async function initFloatingClock() {
   const settings = await getClockSettings();
   if (!settings[CLOCK_ENABLED_KEY]) return;
   let timerState = sanitizeTimerState(settings[CLOCK_TIMER_STATE_KEY]);
-  let soundEnabled = Boolean(settings[CLOCK_SOUND_ENABLED_KEY]);
-  let lastAlertKey = "";
 
   const clock = createClock();
   const text = clock.querySelector(".nt-clock-text");
@@ -161,13 +138,6 @@ async function initFloatingClock() {
         second: "2-digit",
         hour12: true,
       });
-    }
-    if (soundEnabled && shouldPlayFiveMinuteAlert(now)) {
-      const alertKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}`;
-      if (lastAlertKey !== alertKey) {
-        lastAlertKey = alertKey;
-        playClockAlertSound();
-      }
     }
   }, 1000);
   const fillTimer = setInterval(() => {
@@ -213,12 +183,7 @@ async function initFloatingClock() {
       applyClockFill(clock, timerState);
     }
 
-    if (changes[CLOCK_SOUND_ENABLED_KEY] && clock.parentNode) {
-      soundEnabled = Boolean(changes[CLOCK_SOUND_ENABLED_KEY].newValue);
-      if (!soundEnabled) {
-        lastAlertKey = "";
-      }
-    }
+
   }
 
   function onPointerMove(event) {

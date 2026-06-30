@@ -5,6 +5,12 @@ const CLOCK_ENABLED_KEY = "floating_clock_enabled";
 const CLOCK_POS_KEY = "floating_clock_pos";
 const CLOCK_THEME_KEY = "floating_clock_theme";
 const CLOCK_SOUND_ENABLED_KEY = "floating_clock_sound_enabled";
+const TRADING_THEME_KEY = "trading_panel_theme";
+const TRADING_POS_KEY = "trading_panel_pos";
+
+function createIcon(name) {
+  return window.NTIcons.create(name);
+}
 
 function getQuotes() {
   return new Promise((resolve) => {
@@ -139,6 +145,53 @@ function initClockSettings() {
   });
 }
 
+function setTradingStatus(message) {
+  const status = document.getElementById("tradingStatus");
+  if (!status) return;
+  status.textContent = message;
+  setTimeout(() => {
+    if (status.textContent === message) {
+      status.textContent = "";
+    }
+  }, 1400);
+}
+
+function initTradingSettings() {
+  const tradingThemeLight = document.getElementById("tradingThemeLight");
+  const tradingThemeLabel = document.getElementById("tradingThemeLabel");
+  const resetTradingPos = document.getElementById("resetTradingPos");
+  if (!tradingThemeLight || !tradingThemeLabel || !resetTradingPos) return;
+
+  function applyTradingThemeLabel(theme) {
+    tradingThemeLabel.textContent = theme === "light" ? "Light" : "Dark";
+  }
+
+  chrome.storage.sync.get(
+    {
+      [TRADING_THEME_KEY]: "dark",
+    },
+    (data) => {
+      const theme = data[TRADING_THEME_KEY] === "light" ? "light" : "dark";
+      tradingThemeLight.checked = theme === "light";
+      applyTradingThemeLabel(theme);
+    }
+  );
+
+  tradingThemeLight.addEventListener("change", () => {
+    const theme = tradingThemeLight.checked ? "light" : "dark";
+    chrome.storage.sync.set({ [TRADING_THEME_KEY]: theme }, () => {
+      applyTradingThemeLabel(theme);
+      setTradingStatus("Trading theme saved");
+    });
+  });
+
+  resetTradingPos.addEventListener("click", () => {
+    chrome.storage.sync.remove(TRADING_POS_KEY, () => {
+      setTradingStatus("Trading position reset");
+    });
+  });
+}
+
 function normalizeQuote(raw) {
   if (typeof raw === "string") {
     return { text: raw.trim(), author: "" };
@@ -172,13 +225,13 @@ function createQuoteItem(quote, index, onSave, onDelete) {
   editBtn.type = "button";
   editBtn.className = "icon-btn";
   editBtn.setAttribute("aria-label", "Edit quote");
-  editBtn.textContent = "✎";
+  editBtn.appendChild(createIcon("edit"));
 
   const delBtn = document.createElement("button");
   delBtn.type = "button";
   delBtn.className = "icon-btn danger";
   delBtn.setAttribute("aria-label", "Delete quote");
-  delBtn.textContent = "🗑";
+  delBtn.appendChild(createIcon("trash"));
 
   rowActions.append(editBtn, delBtn);
   row.append(rowText, rowAuthor, rowActions);
@@ -212,13 +265,13 @@ function createQuoteItem(quote, index, onSave, onDelete) {
   saveBtn.type = "button";
   saveBtn.className = "icon-btn";
   saveBtn.setAttribute("aria-label", "Save quote");
-  saveBtn.textContent = "✓";
+  saveBtn.appendChild(createIcon("check"));
 
   const cancelBtn = document.createElement("button");
   cancelBtn.type = "button";
   cancelBtn.className = "icon-btn";
   cancelBtn.setAttribute("aria-label", "Cancel edit");
-  cancelBtn.textContent = "✖";
+  cancelBtn.appendChild(createIcon("close"));
 
   editActions.append(saveBtn, cancelBtn);
   editContainer.append(textField, authorField, editActions);
@@ -249,6 +302,7 @@ function createQuoteItem(quote, index, onSave, onDelete) {
 
   delBtn.addEventListener("click", async (e) => {
     e.preventDefault();
+    if (!confirm("Delete this quote?")) return;
     await onDelete(index, item);
   });
 
@@ -400,6 +454,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initTheme();
   initWhitelist();
   initClockSettings();
+  initTradingSettings();
   document.getElementById("addQuote").addEventListener("click", addQuote);
   document.getElementById("importQuotes").addEventListener("click", importQuotes);
   document.getElementById("exportQuotes").addEventListener("click", exportQuotes);

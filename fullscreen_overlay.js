@@ -48,9 +48,18 @@ function createOverlay() {
   const panel = document.createElement("div");
   panel.id = "nt-tab-panel";
 
+  const header = document.createElement("div");
+  header.className = "nt-panel-header";
+  const label = document.createElement("span");
+  label.textContent = "Open tabs";
+  const hint = document.createElement("span");
+  hint.className = "nt-panel-hint";
+  hint.textContent = "Click to switch";
+  header.append(label, hint);
+
   const list = document.createElement("div");
   list.id = "nt-tab-list";
-  panel.appendChild(list);
+  panel.append(header, list);
 
   document.body.appendChild(hoverZone);
   document.body.appendChild(panel);
@@ -98,7 +107,20 @@ function renderTabs(list, tabs) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "nt-tab-item";
-    btn.textContent = tab.title || tab.url || "(untitled)";
+    btn.title = tab.title || tab.url || "Untitled tab";
+    const favicon = document.createElement("span");
+    favicon.className = "nt-tab-favicon";
+    if (tab.favIconUrl) {
+      const img = document.createElement("img");
+      img.alt = "";
+      img.src = tab.favIconUrl;
+      img.onerror = () => img.remove();
+      favicon.appendChild(img);
+    }
+    const title = document.createElement("span");
+    title.className = "nt-tab-title";
+    title.textContent = tab.title || tab.url || "(untitled)";
+    btn.append(favicon, title);
     if (tab.active) {
       btn.classList.add("active");
     }

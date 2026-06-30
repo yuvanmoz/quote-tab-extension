@@ -1,15 +1,30 @@
 {
-  "name": "Motivational Quote New Tab",
-  "description": "Shows a random motivational quote on the New Tab page.",
-  "version": "1.0.0",
+  "name": "Momentum — Quote New Tab",
+  "description": "A focused new tab with personal quotes, shortcuts, notes, and a timer.",
+  "version": "1.1.0",
   "manifest_version": 3,
+  "action": {
+    "default_title": "Momentum",
+    "default_icon": {
+      "16": "asset/icon16.png",
+      "32": "asset/icon32.png",
+      "48": "asset/icon48.png",
+      "128": "asset/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "asset/icon16.png",
+    "32": "asset/icon32.png",
+    "48": "asset/icon48.png",
+    "128": "asset/icon128.png"
+  },
   "background": {
     "service_worker": "background.js"
   },
   "chrome_url_overrides": {
     "newtab": "newtab.html"
   },
-  "permissions": ["storage", "tabs", "windows"],
+  "permissions": ["storage", "tabs", "windows", "alarms", "offscreen"],
   "host_permissions": ["https://*/*", "http://*/*"],
   "options_page": "options.html",
   "content_scripts": [
@@ -22,11 +37,16 @@
       "matches": ["https://*/*", "http://*/*"],
       "js": ["floating_clock.js"],
       "css": ["floating_clock.css"]
+    },
+    {
+      "matches": ["https://web.sahi.com/*"],
+      "js": ["trading_panel.js"],
+      "css": ["trading_panel.css"]
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["asset/mixkit-magic-notification-ring-2344.wav"],
+      "resources": ["asset/mixkit-magic-notification-ring-2344.wav", "asset/bell.mp3"],
       "matches": ["https://*/*", "http://*/*"]
     }
   ]

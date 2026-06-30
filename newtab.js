@@ -2,7 +2,6 @@ const QUOTES_KEY = "quotes";
 const THEME_KEY = "theme";
 const SITES_KEY = "sites";
 const NOTE_KEY = "quick_note";
-const NOTE_INTENTS = ["default", "focus", "urgent", "idea"];
 const CLOCK_TIMER_STATE_KEY = "floating_clock_timer_state";
 const TYPE_SPEED_MS = 45;
 const DELETE_SPEED_MS = 28;
@@ -17,56 +16,24 @@ let escHandler = null;
 let typewriterTimer = null;
 let typewriterRunId = 0;
 let noteSaveTimer = null;
-let meditationTickTimer = null;
-let meditationPhaseTimer = null;
-let meditationEndAt = 0;
-let meditationRunning = false;
-let meditationPhase = "exhale";
 let quickNoteState = null;
 
-function defaultQuickNoteState() {
-  return {
-    text: "",
-    intent: "default",
-    checklist: [],
-  };
+function createIcon(name, className) {
+  return window.NTIcons.create(name, className);
 }
 
-function makeChecklistItemId() {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+function defaultQuickNoteState() {
+  return "";
 }
 
 function sanitizeQuickNoteState(raw) {
   if (typeof raw === "string") {
-    return {
-      ...defaultQuickNoteState(),
-      text: raw.trim(),
-    };
+    return raw.trim();
   }
-
-  const state = raw && typeof raw === "object" ? raw : defaultQuickNoteState();
-  const text = (state.text || "").toString();
-  const intent = NOTE_INTENTS.includes(state.intent) ? state.intent : "default";
-  const checklist = Array.isArray(state.checklist)
-    ? state.checklist
-        .map((item) => {
-          if (typeof item === "string") {
-            const value = item.trim();
-            if (!value) return null;
-            return { id: makeChecklistItemId(), text: value, done: false };
-          }
-          const value = (item && item.text ? item.text : "").toString().trim();
-          if (!value) return null;
-          return {
-            id: (item.id || makeChecklistItemId()).toString(),
-            text: value,
-            done: Boolean(item.done),
-          };
-        })
-        .filter(Boolean)
-    : [];
-
-  return { text, intent, checklist };
+  if (raw && typeof raw === "object") {
+    return (raw.text || "").toString().trim();
+  }
+  return defaultQuickNoteState();
 }
 let focusTimerTick = null;
 let focusTimerState = {
@@ -116,6 +83,11 @@ function startTypewriterLoop(text) {
   const fullText = (text || "").toString();
   if (!fullText) {
     quoteText.textContent = "";
+    return;
+  }
+
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+    quoteText.textContent = fullText;
     return;
   }
 
@@ -275,7 +247,7 @@ async function renderQuote(lastIndex = -1) {
   const quotes = quotesRaw.map(normalizeQuote).filter((q) => q.text.length > 0);
 
   const emptyState = document.getElementById("emptyState");
-  const card = document.querySelector(".card");
+  const card = document.querySelector(".quote-card");
   if (quotes.length === 0) {
     clearTypewriter();
     const quoteText = document.getElementById("quoteText");
@@ -286,7 +258,7 @@ async function renderQuote(lastIndex = -1) {
   }
 
   emptyState.hidden = true;
-  card.style.display = "block";
+  card.style.display = "";
 
   const { quote, index } = pickRandom(quotes, lastIndex);
   const quoteText = document.getElementById("quoteText");
@@ -323,7 +295,7 @@ function renderAddTile(container) {
 
   const icon = document.createElement("div");
   icon.className = "tile-icon";
-  icon.textContent = "+";
+  icon.appendChild(createIcon("plus"));
 
   const label = document.createElement("div");
   label.className = "tile-label";
@@ -372,55 +344,66 @@ async function renderSites() {
       container.querySelectorAll(".tile-drop-target").forEach((el) => el.classList.remove("tile-drop-target"));
     });
 
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.className = "tile-remove";
-    remove.setAttribute("aria-label", `Remove ${site.name}`);
-    remove.textContent = "x";
-    remove.addEventListener("click", async (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const next = sites.filter((_, idx) => idx !== index);
-      await setSites(next);
-      await renderSites();
-    });
+    const actions = document.createElement("div");
+    actions.className = "tile-actions";
 
     const edit = document.createElement("button");
     edit.type = "button";
-    edit.className = "tile-edit";
+    edit.className = "tile-action-btn edit-btn";
     edit.setAttribute("aria-label", `Edit ${site.name}`);
-    edit.textContent = "e";
+    edit.appendChild(createIcon("edit"));
     edit.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
       openSiteModal("edit", site, index);
     });
 
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "tile-action-btn remove-btn danger";
+    remove.setAttribute("aria-label", `Remove ${site.name}`);
+    remove.appendChild(createIcon("trash"));
+    remove.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!confirm(`Remove ${site.name}?`)) return;
+      const next = sites.filter((_, idx) => idx !== index);
+      await setSites(next);
+      await renderSites();
+    });
+
+    actions.append(edit, remove);
+
     const icon = document.createElement("div");
     icon.className = "tile-icon";
     const img = document.createElement("img");
     img.alt = "";
-    // Prefer stored icon, then browser favicon, then Google s2 fallback
-    if (site.icon) {
-      img.src = site.icon;
-    } else {
-      img.src = `chrome://favicon2/?size=64&url=${encodeURIComponent(site.url)}`;
-      img.onerror = () => {
-        try {
-          const parsed = new URL(site.url);
-          img.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(parsed.hostname)}&sz=64`;
-        } catch (e) {
-          img.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(site.url)}&sz=64`;
-        }
-      };
-    }
-    icon.appendChild(img);
+    const fallback = document.createElement("span");
+    fallback.textContent = (site.name || labelFromUrl(site.url)).charAt(0).toUpperCase();
+    fallback.hidden = true;
+    let triedRemoteFallback = Boolean(site.icon);
+    img.onerror = () => {
+      if (!triedRemoteFallback) {
+        triedRemoteFallback = true;
+        const hostname = (() => {
+          try { return new URL(site.url).hostname; } catch (error) { return site.url; }
+        })();
+        img.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=64`;
+        return;
+      }
+      img.onerror = null;
+      img.hidden = true;
+      fallback.hidden = false;
+      icon.classList.add("tile-fallback");
+    };
+    img.src = site.icon || `chrome://favicon2/?size=64&url=${encodeURIComponent(site.url)}`;
+    icon.append(img, fallback);
 
     const label = document.createElement("div");
     label.className = "tile-label";
     label.textContent = site.name || labelFromUrl(site.url);
 
-    link.append(edit, remove, icon, label);
+    link.append(actions, icon, label);
     container.appendChild(link);
   });
 
@@ -555,81 +538,12 @@ function setNotesExpanded(expanded) {
   if (!notesBox || !toggle || !input) return;
 
   notesBox.classList.toggle("is-collapsed", !expanded);
-  toggle.textContent = expanded ? "-" : "+";
+  toggle.replaceChildren(createIcon(expanded ? "minus" : "plus"));
   toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
 
   if (expanded) {
     input.focus();
   }
-}
-
-function updateNotesPreview(state) {
-  const preview = document.getElementById("notesPreview");
-  if (!preview) return;
-  const normalized = (state.text || "").replace(/\s+/g, " ").trim();
-  const openCount = state.checklist.filter((item) => !item.done).length;
-  if (normalized) {
-    preview.textContent = normalized;
-    return;
-  }
-  if (openCount > 0) {
-    preview.textContent = `${openCount} checklist item${openCount === 1 ? "" : "s"} pending`;
-    return;
-  }
-  preview.textContent = "Add a quick reminder...";
-}
-
-function renderNoteIntent(state) {
-  const notesBox = document.getElementById("quickNotes");
-  const buttons = document.querySelectorAll("[data-intent-value]");
-  if (notesBox) {
-    notesBox.dataset.intent = state.intent;
-  }
-  buttons.forEach((button) => {
-    const active = button.dataset.intentValue === state.intent;
-    button.classList.toggle("is-active", active);
-    button.setAttribute("aria-pressed", active ? "true" : "false");
-  });
-}
-
-function renderChecklist(state) {
-  const list = document.getElementById("notesChecklist");
-  if (!list) return;
-  list.innerHTML = "";
-
-  if (state.checklist.length === 0) {
-    const empty = document.createElement("li");
-    empty.className = "checklist-item checklist-empty";
-    empty.innerHTML = '<span class="checklist-text">No checklist items</span>';
-    list.appendChild(empty);
-    return;
-  }
-
-  state.checklist.forEach((item) => {
-    const li = document.createElement("li");
-    li.className = `checklist-item${item.done ? " is-done" : ""}`;
-    li.dataset.itemId = item.id;
-
-    const check = document.createElement("input");
-    check.type = "checkbox";
-    check.checked = item.done;
-    check.dataset.itemId = item.id;
-    check.setAttribute("aria-label", `Toggle ${item.text}`);
-
-    const text = document.createElement("span");
-    text.className = "checklist-text";
-    text.textContent = item.text;
-
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.className = "checklist-remove ghost";
-    remove.textContent = "x";
-    remove.dataset.itemId = item.id;
-    remove.setAttribute("aria-label", `Remove ${item.text}`);
-
-    li.append(check, text, remove);
-    list.appendChild(li);
-  });
 }
 
 function scheduleNoteSave() {
@@ -644,20 +558,12 @@ function scheduleNoteSave() {
 async function initQuickNotes() {
   const notesBox = document.getElementById("quickNotes");
   const toggle = document.getElementById("notesToggle");
-  const preview = document.getElementById("notesPreview");
   const input = document.getElementById("notesInput");
-  const checklistInput = document.getElementById("checklistInput");
-  const checklistAdd = document.getElementById("checklistAdd");
-  const checklistList = document.getElementById("notesChecklist");
-  const intentButtons = document.querySelectorAll("[data-intent-value]");
-  if (!notesBox || !toggle || !preview || !input || !checklistInput || !checklistAdd || !checklistList) return;
+  if (!notesBox || !toggle || !input) return;
 
   const savedState = await getQuickNoteState();
   quickNoteState = savedState;
-  input.value = quickNoteState.text;
-  updateNotesPreview(quickNoteState);
-  renderNoteIntent(quickNoteState);
-  renderChecklist(quickNoteState);
+  input.value = quickNoteState;
   setNotesExpanded(false);
 
   toggle.addEventListener("click", () => {
@@ -665,13 +571,12 @@ async function initQuickNotes() {
     setNotesExpanded(collapsed);
   });
 
-  preview.addEventListener("click", () => {
+  input.addEventListener("focus", () => {
     setNotesExpanded(true);
   });
 
   input.addEventListener("input", () => {
-    quickNoteState.text = input.value;
-    updateNotesPreview(quickNoteState);
+    quickNoteState = input.value;
     scheduleNoteSave();
   });
 
@@ -689,62 +594,6 @@ async function initQuickNotes() {
       input.blur();
       setNotesExpanded(false);
     }
-  });
-
-  intentButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      const intent = button.dataset.intentValue;
-      if (!NOTE_INTENTS.includes(intent)) return;
-      quickNoteState.intent = intent;
-      renderNoteIntent(quickNoteState);
-      scheduleNoteSave();
-    });
-  });
-
-  function addChecklistItem() {
-    const text = checklistInput.value.trim();
-    if (!text) return;
-    quickNoteState.checklist.push({
-      id: makeChecklistItemId(),
-      text,
-      done: false,
-    });
-    checklistInput.value = "";
-    renderChecklist(quickNoteState);
-    updateNotesPreview(quickNoteState);
-    scheduleNoteSave();
-  }
-
-  checklistAdd.addEventListener("click", addChecklistItem);
-  checklistInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      addChecklistItem();
-    }
-  });
-
-  checklistList.addEventListener("change", (event) => {
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement) || target.type !== "checkbox") return;
-    const itemId = target.dataset.itemId;
-    if (!itemId) return;
-    const item = quickNoteState.checklist.find((entry) => entry.id === itemId);
-    if (!item) return;
-    item.done = target.checked;
-    renderChecklist(quickNoteState);
-    updateNotesPreview(quickNoteState);
-    scheduleNoteSave();
-  });
-
-  checklistList.addEventListener("click", (event) => {
-    const target = event.target;
-    if (!(target instanceof HTMLButtonElement) || !target.classList.contains("checklist-remove")) return;
-    const itemId = target.dataset.itemId;
-    if (!itemId) return;
-    quickNoteState.checklist = quickNoteState.checklist.filter((entry) => entry.id !== itemId);
-    renderChecklist(quickNoteState);
-    updateNotesPreview(quickNoteState);
-    scheduleNoteSave();
   });
 }
 
@@ -942,95 +791,7 @@ async function initFocusTimer() {
   });
 }
 
-function setMeditationPhase(phase) {
-  const card = document.getElementById("meditationCard");
-  const breathText = document.getElementById("breathText");
-  if (!card || !breathText) return;
 
-  meditationPhase = phase;
-  card.classList.remove("is-inhale", "is-exhale");
-  card.classList.add(phase === "inhale" ? "is-inhale" : "is-exhale");
-  breathText.textContent = phase === "inhale" ? "Breathe in" : "Breathe out";
-}
-
-function stopMeditation(keepTimer = false) {
-  meditationRunning = false;
-  if (meditationTickTimer) {
-    clearInterval(meditationTickTimer);
-    meditationTickTimer = null;
-  }
-  if (meditationPhaseTimer) {
-    clearTimeout(meditationPhaseTimer);
-    meditationPhaseTimer = null;
-  }
-
-  const startBtn = document.getElementById("meditationStart");
-  const timer = document.getElementById("meditationTimer");
-  const breathText = document.getElementById("breathText");
-  const card = document.getElementById("meditationCard");
-  if (startBtn) startBtn.textContent = "Start";
-  if (card) card.classList.remove("is-inhale", "is-exhale");
-  if (breathText) breathText.textContent = "Ready";
-  if (!keepTimer && timer) timer.textContent = "00:00";
-}
-
-function scheduleMeditationPhaseSwitch() {
-  if (!meditationRunning) return;
-  const nextPhase = meditationPhase === "inhale" ? "exhale" : "inhale";
-  const waitMs = meditationPhase === "inhale" ? BREATH_IN_MS : BREATH_OUT_MS;
-
-  meditationPhaseTimer = setTimeout(() => {
-    if (!meditationRunning) return;
-    setMeditationPhase(nextPhase);
-    scheduleMeditationPhaseSwitch();
-  }, waitMs);
-}
-
-function startMeditation(minutes) {
-  const durationMs = Math.max(1, minutes) * 60 * 1000;
-  const timer = document.getElementById("meditationTimer");
-  const startBtn = document.getElementById("meditationStart");
-
-  stopMeditation(true);
-  meditationRunning = true;
-  meditationEndAt = Date.now() + durationMs;
-  if (startBtn) startBtn.textContent = "Running";
-  setMeditationPhase("inhale");
-
-  if (timer) {
-    timer.textContent = formatSeconds(Math.ceil(durationMs / 1000));
-  }
-
-  meditationTickTimer = setInterval(() => {
-    const secondsLeft = Math.ceil((meditationEndAt - Date.now()) / 1000);
-    if (timer) {
-      timer.textContent = formatSeconds(secondsLeft);
-    }
-    if (secondsLeft <= 0) {
-      stopMeditation(false);
-    }
-  }, 250);
-
-  scheduleMeditationPhaseSwitch();
-}
-
-function initMeditation() {
-  const durationSelect = document.getElementById("meditationMinutes");
-  const startBtn = document.getElementById("meditationStart");
-  const stopBtn = document.getElementById("meditationStop");
-
-  if (!durationSelect || !startBtn || !stopBtn) return;
-
-  startBtn.addEventListener("click", () => {
-    if (meditationRunning) return;
-    const minutes = Number(durationSelect.value || "3");
-    startMeditation(minutes);
-  });
-
-  stopBtn.addEventListener("click", () => {
-    stopMeditation(false);
-  });
-}
 
 function calculateYearProgress() {
   const now = new Date();
@@ -1086,12 +847,28 @@ function renderProgressGrid() {
   // Format date
   const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
   const dateStr = progress.currentDate.toLocaleDateString('en-US', dateOptions);
+
+  const yearTitle = document.getElementById("yearTitle");
+  const percentLabel = document.getElementById("progressPercent");
+  const todayLabel = document.getElementById("todayLabel");
+  if (yearTitle) yearTitle.textContent = String(progress.currentDate.getFullYear());
+  if (percentLabel) percentLabel.textContent = `${progress.percentage}%`;
+  if (todayLabel) {
+    todayLabel.textContent = progress.currentDate.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+  }
   
   // Update stats
   statsContainer.innerHTML = `
-    <div><span class="stats-number">${progress.daysCompleted}</span> days completed</div>
-    <div><span class="stats-number">${progress.daysLeft}</span> days left</div>
-    <div style="margin-top: 8px; font-size: 12px; color: var(--muted);">${dateStr}</div>
+    <div class="stats-row"><span>Completed</span><span class="stats-number">${progress.daysCompleted} days</span></div>
+    <div class="progress-bar-container" title="${progress.percentage}% of the year completed">
+      <div class="progress-bar-fill" style="width: ${progress.percentage}%"></div>
+    </div>
+    <div class="stats-row"><span>Remaining</span><span class="stats-number">${progress.daysLeft} days</span></div>
+    <div class="stats-row"><span>Today</span><span>${dateStr}</span></div>
   `;
 }
 
@@ -1101,7 +878,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupContainerDnD();
   await renderSites();
   await initQuickNotes();
-  initMeditation();
   await initFocusTimer();
 
   const state = await renderQuote();

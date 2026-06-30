@@ -1,6 +1,6 @@
-# Motivational Quote New Tab
+# Momentum — Quote New Tab
 
-A Chrome/Brave New Tab extension that displays your own motivational quotes plus a customizable grid of site shortcuts. Quotes sync across devices using `chrome.storage.sync`.
+A polished Chrome/Brave focus dashboard with personal quotes, site shortcuts, quick notes, a focus timer, and optional page overlays. Settings sync using `chrome.storage.sync`.
 
 ## Features
 - Random motivational quote on every new tab

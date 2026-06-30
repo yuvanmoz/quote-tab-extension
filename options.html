@@ -3,121 +3,111 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Quote Manager</title>
+  <title>Momentum Settings</title>
   <link rel="stylesheet" href="options.css" />
 </head>
 <body>
   <div class="shell">
     <header class="hero">
       <div class="hero-text">
-        <div class="badge">Quote Studio</div>
-        <h1>Quote Manager</h1>
-        <p>Add, edit, or delete your motivational quotes. Changes sync across devices.</p>
+        <div class="brand"><span class="brand-mark" data-icon="quote"></span>Momentum</div>
+        <div class="badge">Settings</div>
+        <h1>Your focus space</h1>
+        <p>Manage quotes, overlays, and the details that make every new tab feel intentional.</p>
       </div>
       <div class="hero-card">
-        <div class="stat">
-          <span>Total quotes</span>
-          <strong id="quoteCount">0</strong>
-        </div>
+        <div class="stat"><span>Total quotes</span><strong id="quoteCount">0</strong></div>
         <div class="hero-actions">
-          <button id="exportQuotes" type="button">Export</button>
-          <button id="clearAll" type="button" class="danger">Clear all</button>
+          <button id="exportQuotes" type="button" data-icon="download">Export</button>
+          <button id="clearAll" type="button" class="danger" data-icon="trash">Clear all</button>
         </div>
       </div>
     </header>
 
-    <section class="grid">
+    <nav class="section-nav" aria-label="Settings sections">
+      <a href="#quotes" data-icon="quote">Quotes</a>
+      <a href="#overlay" data-icon="shield">Tab overlay</a>
+      <a href="#clock" data-icon="timer">Floating clock</a>
+      <a href="#trading" data-icon="settings">Trading panel</a>
+    </nav>
+
+    <section class="grid" id="quotes">
       <section class="panel">
-        <div class="panel-title">
-          <h2>Add a quote</h2>
-          <span class="panel-hint">Single entry</span>
-        </div>
-        <div class="field">
-          <label for="quoteText">Quote</label>
-          <textarea id="quoteText" rows="3" placeholder="Type your quote"></textarea>
-        </div>
-        <div class="field">
-          <label for="quoteAuthor">Author (optional)</label>
-          <input id="quoteAuthor" type="text" placeholder="Your name" />
-        </div>
-        <button id="addQuote" type="button" class="primary">Add quote</button>
+        <div class="panel-title"><h2>Add a quote</h2><span class="panel-hint">Single entry</span></div>
+        <div class="field"><label for="quoteText">Quote</label><textarea id="quoteText" rows="3" placeholder="Type your quote"></textarea></div>
+        <div class="field"><label for="quoteAuthor">Author <span>(optional)</span></label><input id="quoteAuthor" type="text" placeholder="Author name" /></div>
+        <button id="addQuote" type="button" class="primary" data-icon="plus">Add quote</button>
       </section>
 
       <section class="panel">
-        <div class="panel-title">
-          <h2>Bulk import</h2>
-          <span class="panel-hint">Paste multiple</span>
-        </div>
-        <p>One quote per line. Optional author format: <span class="mono">Quote text - Author</span></p>
-        <textarea id="bulkInput" rows="6" placeholder="Line 1\nLine 2 - Author"></textarea>
-        <button id="importQuotes" type="button">Import</button>
+        <div class="panel-title"><h2>Bulk import</h2><span class="panel-hint">Paste multiple</span></div>
+        <p>One quote per line. Optional format: <span class="mono">Quote text - Author</span></p>
+        <textarea id="bulkInput" rows="6" placeholder="Line 1&#10;Line 2 - Author"></textarea>
+        <button id="importQuotes" type="button" data-icon="download">Import</button>
       </section>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="overlay">
       <div class="panel-title">
-        <h2>Fullscreen Tab Overlay</h2>
+        <div class="title-with-icon"><span data-icon="shield"></span><h2>Fullscreen tab overlay</h2></div>
         <span class="panel-hint">Whitelist domains</span>
       </div>
-      <p>Only these domains will show the fullscreen tab overlay. One domain per line (e.g., <span class="mono">tradingview.com</span>).</p>
-      <textarea id="whitelistInput" rows="5" placeholder="angelone.in\ntradingview.com"></textarea>
+      <p>Show a compact tab switcher only on these domains. Enter one domain per line.</p>
+      <textarea id="whitelistInput" rows="5" placeholder="tradingview.com&#10;example.com"></textarea>
       <div class="row">
-        <button id="saveWhitelist" type="button" class="primary">Save whitelist</button>
-        <span id="whitelistStatus" class="status"></span>
+        <button id="saveWhitelist" type="button" class="primary" data-icon="check">Save whitelist</button>
+        <span id="whitelistStatus" class="status" role="status"></span>
       </div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="clock">
       <div class="panel-title">
-        <h2>Floating Clock</h2>
+        <div class="title-with-icon"><span data-icon="timer"></span><h2>Floating clock</h2></div>
         <span class="panel-hint">Global overlay</span>
       </div>
-      <p>Show a draggable floating clock on web pages. Uses local computer time in 12-hour format with AM/PM.</p>
+      <p>Show a draggable clock on web pages and visualize focus timer progress.</p>
+      <div class="setting-row">
+        <div class="setting-copy"><strong>Floating clock</strong><span>Compact draggable clock on websites</span></div>
+        <label class="switch" for="clockEnabled"><input id="clockEnabled" type="checkbox" /><span class="switch-track"></span></label>
+      </div>
+      <div class="setting-row">
+        <div class="setting-copy"><strong>Light clock theme</strong><span><span id="clockThemeLabel">Dark</span> mode is active</span></div>
+        <label class="switch" for="clockThemeLight"><input id="clockThemeLight" type="checkbox" /><span class="switch-track"></span></label>
+      </div>
+      <div class="setting-row">
+        <div class="setting-copy"><strong>Five-minute alert</strong><span>Play a sound before each five-minute mark</span></div>
+        <label class="switch" for="clockSoundEnabled"><input id="clockSoundEnabled" type="checkbox" /><span class="switch-track"></span></label>
+      </div>
       <div class="row">
-        <div class="clock-toggle-row">
-          <div class="clock-toggle-copy">
-            <div class="clock-toggle-label">Turn on floating clock</div>
-            <div class="clock-toggle-sub">Compact draggable clock on websites</div>
-          </div>
-          <label class="clock-switch" for="clockEnabled" aria-label="Turn on floating clock">
-            <input id="clockEnabled" type="checkbox" />
-            <span class="clock-switch-track"></span>
-          </label>
-        </div>
-        <button id="resetClockPos" type="button">Reset position</button>
+        <button id="resetClockPos" type="button" data-icon="rotate">Reset position</button>
+        <span id="clockStatus" class="status" role="status"></span>
       </div>
-      <div class="clock-theme-row">
-        <div class="clock-toggle-copy">
-          <div class="clock-toggle-label">Clock theme</div>
-          <div class="clock-toggle-sub"><span id="clockThemeLabel">Dark</span> mode</div>
-        </div>
-        <label class="clock-switch" for="clockThemeLight" aria-label="Use light clock theme">
-          <input id="clockThemeLight" type="checkbox" />
-          <span class="clock-switch-track"></span>
-        </label>
+    </section>
+
+    <section class="panel" id="trading">
+      <div class="panel-title">
+        <div class="title-with-icon"><span data-icon="settings"></span><h2>Trading panel</h2></div>
+        <span class="panel-hint">Sahi Web terminal</span>
       </div>
-      <div class="clock-theme-row">
-        <div class="clock-toggle-copy">
-          <div class="clock-toggle-label">5-min alert sound</div>
-          <div class="clock-toggle-sub">Play at xx:xx:50 before each 5-minute mark</div>
-        </div>
-        <label class="clock-switch" for="clockSoundEnabled" aria-label="Enable 5-minute sound alert">
-          <input id="clockSoundEnabled" type="checkbox" />
-          <span class="clock-switch-track"></span>
-        </label>
+      <p>Configure the floating trading control panel injected on Sahi Web.</p>
+      <div class="setting-row">
+        <div class="setting-copy"><strong>Light trading theme</strong><span><span id="tradingThemeLabel">Dark</span> mode is active</span></div>
+        <label class="switch" for="tradingThemeLight"><input id="tradingThemeLight" type="checkbox" /><span class="switch-track"></span></label>
       </div>
-      <div id="clockStatus" class="status"></div>
+      <div class="row">
+        <button id="resetTradingPos" type="button" data-icon="rotate">Reset position</button>
+        <span id="tradingStatus" class="status" role="status"></span>
+      </div>
     </section>
 
     <section class="panel list-panel">
-      <div class="row">
-        <h2>Your quotes</h2>
-      </div>
+      <div class="panel-title"><div><span class="eyebrow">Library</span><h2>Your quotes</h2></div><span class="panel-hint">Synced across devices</span></div>
       <div id="quoteList" class="list"></div>
-      <div id="emptyList" class="empty" hidden>No quotes yet.</div>
+      <div id="emptyList" class="empty" hidden>No quotes yet. Add one above to get started.</div>
     </section>
   </div>
 
+  <script src="ui-icons.js"></script>
   <script src="options.js"></script>
 </body>
 </html>
