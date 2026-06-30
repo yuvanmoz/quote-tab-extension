@@ -7,6 +7,7 @@ const CLOCK_THEME_KEY = "floating_clock_theme";
 const CLOCK_SOUND_ENABLED_KEY = "floating_clock_sound_enabled";
 const TRADING_THEME_KEY = "trading_panel_theme";
 const TRADING_POS_KEY = "trading_panel_pos";
+const TRADING_ENABLED_KEY = "trading_panel_enabled";
 
 function createIcon(name) {
   return window.NTIcons.create(name);
@@ -157,10 +158,11 @@ function setTradingStatus(message) {
 }
 
 function initTradingSettings() {
+  const tradingEnabled = document.getElementById("tradingEnabled");
   const tradingThemeLight = document.getElementById("tradingThemeLight");
   const tradingThemeLabel = document.getElementById("tradingThemeLabel");
   const resetTradingPos = document.getElementById("resetTradingPos");
-  if (!tradingThemeLight || !tradingThemeLabel || !resetTradingPos) return;
+  if (!tradingEnabled || !tradingThemeLight || !tradingThemeLabel || !resetTradingPos) return;
 
   function applyTradingThemeLabel(theme) {
     tradingThemeLabel.textContent = theme === "light" ? "Light" : "Dark";
@@ -168,14 +170,22 @@ function initTradingSettings() {
 
   chrome.storage.sync.get(
     {
+      [TRADING_ENABLED_KEY]: true,
       [TRADING_THEME_KEY]: "dark",
     },
     (data) => {
+      tradingEnabled.checked = Boolean(data[TRADING_ENABLED_KEY]);
       const theme = data[TRADING_THEME_KEY] === "light" ? "light" : "dark";
       tradingThemeLight.checked = theme === "light";
       applyTradingThemeLabel(theme);
     }
   );
+
+  tradingEnabled.addEventListener("change", () => {
+    chrome.storage.sync.set({ [TRADING_ENABLED_KEY]: tradingEnabled.checked }, () => {
+      setTradingStatus("Trading settings saved");
+    });
+  });
 
   tradingThemeLight.addEventListener("change", () => {
     const theme = tradingThemeLight.checked ? "light" : "dark";

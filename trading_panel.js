@@ -1,5 +1,6 @@
 const PANEL_POS_KEY = "trading_panel_pos";
 const THEME_KEY = "trading_panel_theme";
+const ENABLED_KEY = "trading_panel_enabled";
 
 // Modular configuration for panel buttons
 const BUTTONS_CONFIG = [
@@ -32,6 +33,7 @@ function getSettings() {
       {
         [PANEL_POS_KEY]: null,
         [THEME_KEY]: "dark",
+        [ENABLED_KEY]: true,
       },
       (data) => resolve(data)
     );
@@ -172,30 +174,57 @@ async function initTradingPanel() {
   if (window !== window.top) return;
 
   const settings = await getSettings();
+  let panelEnabled = settings[ENABLED_KEY] !== false;
   
-  // Theme selection: read extension theme, but adapt if page has light mode indicator
-  let resolvedTheme = settings[THEME_KEY] || "dark";
-  if (document.body && (document.body.classList.contains("theme-light") || document.body.getAttribute("data-theme") === "light")) {
-    resolvedTheme = "light";
+  let panel = null;
+  let dragState = null;
+
+  function teardown() {
+    if (panel && panel.parentNode) {
+      panel.parentNode.removeChild(panel);
+      panel = null;
+    }
+    window.removeEventListener("resize", onResize);
+    window.removeEventListener("pointermove", onPointerMove);
+    window.removeEventListener("pointerup", onPointerUp);
+    dragState = null;
   }
 
-  const panel = createTradingPanel(resolvedTheme);
-  document.body.appendChild(panel);
+  function setup() {
+    let resolvedTheme = settings[THEME_KEY] || "dark";
+    if (document.body && (document.body.classList.contains("theme-light") || document.body.getAttribute("data-theme") === "light")) {
+      resolvedTheme = "light";
+    }
 
-  // Set default / saved position
-  const rect = panel.getBoundingClientRect();
-  const defaultPos = {
-    x: 24,
-    y: 80, // Underneath potential header elements or clock
-  };
-  const startPos = settings[PANEL_POS_KEY] && typeof settings[PANEL_POS_KEY].x === "number"
-    ? settings[PANEL_POS_KEY]
-    : defaultPos;
-  
-  applyPanelPos(panel, startPos);
+    panel = createTradingPanel(resolvedTheme);
+    document.body.appendChild(panel);
 
-  // Drag-and-drop state
-  let dragState = null;
+    const defaultPos = {
+      x: 24,
+      y: 80,
+    };
+    const startPos = settings[PANEL_POS_KEY] && typeof settings[PANEL_POS_KEY].x === "number"
+      ? settings[PANEL_POS_KEY]
+      : defaultPos;
+    
+    applyPanelPos(panel, startPos);
+
+    panel.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      if (event.target.closest(".nt-btn")) return;
+
+      const rectNow = panel.getBoundingClientRect();
+      dragState = {
+        offsetX: event.clientX - rectNow.left,
+        offsetY: event.clientY - rectNow.top,
+      };
+      panel.classList.add("nt-dragging");
+      window.addEventListener("pointermove", onPointerMove);
+      window.addEventListener("pointerup", onPointerUp);
+    });
+
+    window.addEventListener("resize", onResize);
+  }
 
   function onPointerMove(event) {
     if (!dragState) return;
@@ -216,40 +245,43 @@ async function initTradingPanel() {
     dragState = null;
   }
 
-  panel.addEventListener("pointerdown", (event) => {
-    // Only drag with left click and when not clicking buttons
-    if (event.button !== 0) return;
-    if (event.target.closest(".nt-btn")) return;
-
-    const rectNow = panel.getBoundingClientRect();
-    dragState = {
-      offsetX: event.clientX - rectNow.left,
-      offsetY: event.clientY - rectNow.top,
-    };
-    panel.classList.add("nt-dragging");
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp);
-  });
-
   function onResize() {
+    if (!panel) return;
     const left = parseFloat(panel.style.left || "24");
     const top = parseFloat(panel.style.top || "80");
     const next = applyPanelPos(panel, { x: left, y: top });
     savePanelPosition(next);
   }
 
-  window.addEventListener("resize", onResize);
+  // Initial check and setup
+  if (panelEnabled) {
+    setup();
+  }
 
-  // Listen for storage changes to sync position or theme
+  // Listen for storage changes to sync state, position, or theme
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "sync") return;
 
-    if (changes[PANEL_POS_KEY] && changes[PANEL_POS_KEY].newValue) {
-      applyPanelPos(panel, changes[PANEL_POS_KEY].newValue);
+    if (changes[ENABLED_KEY]) {
+      const nextEnabled = changes[ENABLED_KEY].newValue !== false;
+      if (nextEnabled !== panelEnabled) {
+        panelEnabled = nextEnabled;
+        if (panelEnabled) {
+          setup();
+        } else {
+          teardown();
+        }
+      }
     }
 
-    if (changes[THEME_KEY] && changes[THEME_KEY].newValue) {
-      panel.className = `theme-${changes[THEME_KEY].newValue}`;
+    if (panel) {
+      if (changes[PANEL_POS_KEY] && changes[PANEL_POS_KEY].newValue) {
+        applyPanelPos(panel, changes[PANEL_POS_KEY].newValue);
+      }
+
+      if (changes[THEME_KEY] && changes[THEME_KEY].newValue) {
+        panel.className = `theme-${changes[THEME_KEY].newValue}`;
+      }
     }
   });
 }
